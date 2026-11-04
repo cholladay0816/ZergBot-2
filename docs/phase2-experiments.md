@@ -151,3 +151,45 @@ Final default-path validation (`05f5cff`, detector option off): Hard Protoss see
 26 burrows / 25 emergences, one total roach destruction and zero action errors. The explicit
 metadata comparison passed; wall times were 101.22 versus 103.20 seconds. This is a regression
 check, not an independent win-rate sample. Artifact: `.local-matches/20261104T191404Z-2bb96f52`.
+
+### Separate replay investigation and final limits
+
+The frozen Harder Protoss baseline replay completed both own-player perspective passes
+(167 aligned five-second samples). The opponent first had an Observer at 445 seconds,
+eventually three. Sampled own-player positions include 65 roach/Observer pairs within an
+11-unit analysis neighborhood, starting at 465 seconds. These post-game observations were
+unavailable to the live bot and do not prove any individual damage source.
+
+At 750 seconds, API-reported army supply was 18 for the bot and 111 for Protoss.
+The bot had only Burrow researched; the opponent had Blink, Storm, ground weapons 1 and
+ground armor 1. Its perspective retained seven sampled PsiStorm command entries, twelve
+Guardian Shield entries and six Force Field entries. These are bounded sampled commands,
+not a complete cast count or exact hit attribution. Per-sample unit details omit up to 63
+units; full own counts are collected separately before the detail cap.
+
+The capped Zerg candidate replay also completed both perspectives. At the game-cap sampled
+frame (1200.00 seconds), own API army/worker supply was 0/3
+versus opponent 126/72. Own Queens: 0;
+opponent Mutalisks: 16, Brood Lords: 4, Overseers: 3,
+burrowed Lurkers: 1. The live 1200-second snapshot independently confirms
+zero bases, three drones and no own army. The formal outcome remains capped/unresolved,
+but the state is severely losing; it is not evidence of a near-win. Post-game context never becomes live scouting input.
+The detailed combined artifacts retain both players' economy, unit counts, upgrades and
+sampled positions/orders. Fog-disabled requests do not guarantee full enemy raw fields;
+joining each player's own perspective provides fuller data without fabricating absent fields.
+
+Next hypotheses: a live-observation-gated response to cloaked detection/air composition,
+safe tech and upgrade spending, and defense coverage for all resource bases. Main-base-only
+army defense remains a code limitation; these retained snapshots do not isolate it as the
+dominant cause. Do not promote a detector policy from longer survival or a single capped result.
+
+Replay evidence: `.local-matches/20261104T184343Z-dcec4c36/replay-combined.json` and
+`.local-matches/20261104T190923Z-3e13d849/replay-combined.json`, with perspective JSON and
+readable `replay-analysis-report.md` beside each. Full artifacts remain local.
+
+Final phase resource inventory: 24 supervised runs; reasons {'completed': 24}; exit codes {'1': 1, '0': 23}.
+Peak sampled host CPU 22.7%; minimum free memory 11.09 GiB. These include replay passes
+and the earlier fixed software failure; supervised completion is not a game victory.
+All tests used below-normal owned processes on CPUs 20-23. Resource observations do not
+establish zero impact on other workloads. Final offline suite: 152 passing tests, Ruff
+lint/format, compile, dependency, isolated wheel build and direct wheel-import checks.
