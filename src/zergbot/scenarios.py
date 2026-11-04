@@ -1,12 +1,15 @@
 """Isolated debug-setup micro scenarios, never imported by the competitive bot."""
 
 import argparse
+import asyncio
 import json
 import math
+import random
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
+import numpy as np
 from sc2 import maps
 from sc2.bot_ai import BotAI
 from sc2.data import Race
@@ -60,9 +63,10 @@ def escape_point(position, threat, pathable, distance=3):
 
 
 class MeasuredBot(BotAI):
-    def __init__(self, options, output):
+    def __init__(self, options, output, setup_barrier=None):
         super().__init__()
         self.options, self.output = options, output
+        self.setup_barrier = setup_barrier
         self.events = []
         self.counts = Counter()
         self.damage = Counter()
@@ -73,6 +77,11 @@ class MeasuredBot(BotAI):
         self.next_samples = {}
         self.worker_defense_start = None
         self.worker_defenders = set()
+
+    async def setup_ready(self):
+        if self.setup_barrier is not None:
+            await asyncio.wait_for(self.setup_barrier.wait(), timeout=15)
+        self.record("setup_ready")
 
     def sample_due(self, key, frame, interval):
         if frame < self.next_samples.get(key, 0):
@@ -142,8 +151,8 @@ class MeasuredBot(BotAI):
 
 
 class Defender(MeasuredBot):
-    def __init__(self, options, output):
-        super().__init__(options, output)
+    def __init__(self, options, output, setup_barrier=None):
+        super().__init__(options, output, setup_barrier)
         self.config = BotConfig(
             queen_tactical_micro=options.controller == "micro",
             queen_recovery=options.queen_recovery,
@@ -207,6 +216,7 @@ class Defender(MeasuredBot):
             attacker_position=list(attack),
             resource_grant=self.options.scenario == "cannon",
         )
+        await self.setup_ready()
 
     async def on_step(self, iteration):
         self.begin_frame()
@@ -397,8 +407,8 @@ class Defender(MeasuredBot):
 
 
 class Attacker(MeasuredBot):
-    def __init__(self, options, output):
-        super().__init__(options, output)
+    def __init__(self, options, output, setup_barrier=None):
+        super().__init__(options, output, setup_barrier)
         self.retreating = False
         self.previous_enemy = {}
         self.next_build = 0
@@ -407,6 +417,7 @@ class Attacker(MeasuredBot):
         self.client.game_step = 4
         # Keep town halls to avoid an artificial elimination. Remove only initial workers.
         await self.client.debug_kill_unit(self.workers)
+        await self.setup_ready()
 
     async def on_step(self, iteration):
         self.begin_frame()
@@ -637,10 +648,16 @@ def main():
         + str(args.approach)
     )
     output.mkdir(parents=True)
-    defender, attacker = Defender(args, output), Attacker(args, output)
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    setup_barrier = asyncio.Barrier(2)
+    defender = Defender(args, output, setup_barrier)
+    attacker = Attacker(args, output, setup_barrier)
     settings = dict(
         vars(args),
         scope="isolated_debug_setup_normal_fog",
+        setup_synchronization="two_player_ready_barrier_15s_timeout",
+        python_seed=args.seed,
         game_step=4,
         limitations=(
             "Scripted adversary, not mathematical optimality; no reveal-map/no-cooldown/"

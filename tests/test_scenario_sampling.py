@@ -26,3 +26,22 @@ def test_worker_order_serialization_uses_actual_ability_enum():
     }
     order.target = Point2((1, 2))
     assert observed_order(order)["target"] is None
+
+
+def test_both_scenario_setups_finish_before_either_player_steps():
+    import asyncio
+    from types import SimpleNamespace
+
+    async def run():
+        barrier = asyncio.Barrier(2)
+        first, second = MeasuredBot(None, None, barrier), MeasuredBot(None, None, barrier)
+        first.state = second.state = SimpleNamespace(game_loop=0)
+        waiting = asyncio.create_task(first.setup_ready())
+        await asyncio.sleep(0)
+        assert not waiting.done()
+        await second.setup_ready()
+        await waiting
+        assert first.events == [{"frame": 0, "kind": "setup_ready"}]
+        assert second.events == first.events
+
+    asyncio.run(run())
