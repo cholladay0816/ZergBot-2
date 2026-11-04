@@ -317,3 +317,40 @@ which could interrupt cargo returns. A regression verifies release happens exact
 while the threat remains visible. This is independent of the opening match source.
 202 offline tests and lint/format checks pass. Live pairs use the same two-phase setup
 barrier on both sides (`2341fd5` control, `4b323d5` correction).
+
+
+## Worker release: live command fix, mixed survival
+
+Frozen control `2341fd5` and correction `4b323d5`, normal fog, two-phase startup barrier,
+six lings, one queen, twelve starting workers, 10-second defense window, 90-second cap.
+Both sides retain the same queen controller and six-worker participation limit.
+
+| Approach | Version | Workers lost | Gather-release commands | Final mineral bank | Workers in last pre-expiry sample |
+|---|---|---:|---:|---:|---:|
+| 0 | control | 8 | 565 | 310 | 9 |
+| 0 | candidate | 2 | 18 | 825 | 12 |
+| 1 | control | 6 | 513 | 455 | 10 |
+| 1 | candidate | 9 | 18 | 305 | 10 |
+| 2 | control | 10 | 479 | 180 | 9 |
+| 2 | candidate | 9 | 12 | 310 | 8 |
+
+All runs finish their caps, with the queen alive and zero conflicting-unit frames. Both
+startup phases are recorded at frame 0. Repeated gather commands decrease sharply,
+supporting the command-ownership correction. Survival remains mixed; notably approach 0
+already differs before expiry. Startup synchronization does not prove deterministic
+trajectories, and the loss differences cannot all be credited to the release fix. Mineral
+bank is an observation, not an exact measure of mining interruption or unit collision.
+The correction is retained in the scenario harness; no production worker-defense default
+is enabled from these outcomes. The next isolated hypothesis is whether six selected
+defenders leave too many workers exposed against six lings. Checkpoint `6b9664d` exposes
+a bounded 1-12 participation parameter, default six, with regression coverage for the
+cap and CLI rejection of an unbounded pull. It does not change competitive match policy.
+
+Evidence index: `.local-matches/phase4-worker-release-comparisons.json`, including replay
+and both-player hashes. Defender artifact hashes:
+- `scenario-20261104T213421Z-lings-micro0`: `40b5212ac27abd0fc9b72f54ad635514ac82c423c18dbed90b366bf729c5cd77`.
+- `scenario-20261104T213452Z-lings-micro0`: `fdc7d659cb8341f9b480b528edc6bdca8c2c76e0947aa7798781861d74d9ff4f`.
+- `scenario-20261104T213522Z-lings-micro1`: `0930621ca93fcf7e8c8a12f953ab14b081bc1fd4564e1a8f49c0e75ddd649033`.
+- `scenario-20261104T213552Z-lings-micro1`: `7b7bf1013f326d5fe176bdfcbb1408e551d0baae0be34dd6053706db8cfa47a3`.
+- `scenario-20261104T213623Z-lings-micro2`: `24264115c9edb440e28626985f336bb3d8bef5d3e0a3ef5a6f7432aca264f3e1`.
+- `scenario-20261104T213653Z-lings-micro2`: `5a954779541e5b66544353aab9f8f1d90a4d571ba3dd186485aaa1eabfda13f4`.
