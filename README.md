@@ -136,7 +136,7 @@ Partial replay passes retain their own failure/timeout artifacts.
 
 ## Validation and remaining work
 
-The November 4, 2026 checkpoint passed **224 offline tests**, lint/format checks,
+The November 4, 2026 checkpoint passed **231 offline tests**, lint/format checks,
 compilation, dependency checks and wheel validation. Tests cover pure decisions,
 morph continuity/timeouts, capability fallbacks, command arbitration, real SC2 command
 construction, economy priorities, diagnostic bounds/privacy, replay provenance, CLI
@@ -177,3 +177,5 @@ Continued opening and survival experiments are documented in the
 Their capped economy/scenario probes are separate from full-match win evidence.
 
 The [Adept and offensive Hellion scenario ledger](docs/harassment-scenarios-2026-11-04.md) records actual shade commit/cancel checks, matched diversion results, the corrected setup defect, and policies kept experimental.
+
+The [third-base budget experiment](docs/third-base-budget-2026-11-04.md) completed two paired Terran seeds. Earlier expansion did not produce wins; the option remains off.
