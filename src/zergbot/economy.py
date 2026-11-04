@@ -6,7 +6,7 @@ from sc2.ids.upgrade_id import UpgradeId
 
 from .config import BotConfig
 from .macro import MacroHatchGate, MacroState, extractor_target, queen_target, worker_target
-from .opening import HatchFirstOpening
+from .opening import HatchFirstOpening, OpeningBudget
 from .tech import RoachTech
 
 
@@ -34,6 +34,7 @@ class Economy:
         self.tech = RoachTech(config)
         self.opening = HatchFirstOpening()
         self.opening_status = None
+        self.opening_budget = OpeningBudget()
 
     async def step(self, bot: BotAI, iteration: int, abilities_by_tag=None) -> None:
         if iteration % 8 == 0 and not (
@@ -143,12 +144,23 @@ class Economy:
                 if bot.can_afford(U.HATCHERY):
                     await self.try_expand(bot)
                 return
-        if not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL):
+        pool_needed = not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL)
+        pool_reserved = self.config.opening_readiness and self.opening_budget.reserve(
+            "pool",
+            frame=bot.state.game_loop,
+            needed=bool(pool_needed),
+            eligible=len(resource_bases) >= 2 and bot.workers.amount >= 16,
+            latest_frame=2688,
+        )
+        if pool_needed:
             if bot.workers.amount >= 16 and bot.can_afford(U.SPAWNINGPOOL):
-                await bot.build(
+                submitted = await bot.build(
                     U.SPAWNINGPOOL, near=home.position.towards(bot.game_info.map_center, 5)
                 )
-                return
+                if submitted:
+                    return
+            if pool_reserved:
+                return  # Do not consume this bounded Pool budget on gas or more drones.
         if bot.workers.amount >= 16 and bot.gas_buildings.amount < extractor_target(
             state, self.config
         ):
@@ -159,6 +171,19 @@ class Economy:
                     if bot.can_afford(U.EXTRACTOR) and not bot.already_pending(U.EXTRACTOR):
                         await bot.build(U.EXTRACTOR, geyser)
                         return
+        first_queen_needed = bot.units(U.QUEEN).amount + bot.already_pending(U.QUEEN) == 0
+        queen_reserved = self.config.opening_readiness and self.opening_budget.reserve(
+            "queen",
+            frame=bot.state.game_loop,
+            needed=first_queen_needed,
+            eligible=len(resource_bases) >= 2 and bool(bot.structures(U.SPAWNINGPOOL).ready),
+            latest_frame=5600,
+        )
+        if queen_reserved:
+            submitted = bot.train(U.QUEEN)
+            if submitted:
+                self.production_event(bot, U.QUEEN, submitted)
+            return  # First inject/defense queen before discretionary Warren spending.
         if (
             bot.structures(U.SPAWNINGPOOL).ready
             and not bot.structures(U.ROACHWARREN)
@@ -170,7 +195,9 @@ class Economy:
         if bot.structures(U.SPAWNINGPOOL).ready and bot.units(U.QUEEN).amount + bot.already_pending(
             U.QUEEN
         ) < queen_target(state, self.config):
-            if bot.train(U.QUEEN):
+            submitted = bot.train(U.QUEEN)
+            if submitted:
+                self.production_event(bot, U.QUEEN, submitted)
                 return
         if getattr(bot, "adaptive", None) and await bot.adaptive.produce(bot, home, state):
             return
@@ -292,4 +319,15 @@ class Economy:
                 bot.state.game_loop,
                 reason=reason,
                 location=[location.x, location.y] if location is not None else None,
+            )
+
+    @staticmethod
+    def production_event(bot, unit_type, count):
+        if getattr(bot, "telemetry", None):
+            bot.telemetry.recorder.record(
+                "production_submitted",
+                bot.state.game_loop,
+                unit_type=unit_type.name,
+                count=int(count),
+                scope="own_command_attempt_not_completion",
             )

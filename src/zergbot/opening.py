@@ -28,3 +28,23 @@ class HatchFirstOpening:
             self.aborted = True
             return False
         return True
+
+
+class OpeningBudget:
+    """One bounded reservation per opening stage; observations close each stage."""
+
+    def __init__(self, hold_frames=448):
+        self.hold_frames = hold_frames
+        self.started = {}
+        self.closed = set()
+
+    def reserve(self, stage, *, frame, needed, eligible, latest_frame):
+        if not needed or frame >= latest_frame:
+            self.closed.add(stage)
+        if stage in self.closed or not eligible:
+            return False
+        self.started.setdefault(stage, frame)
+        if frame - self.started[stage] >= self.hold_frames:
+            self.closed.add(stage)
+            return False
+        return True

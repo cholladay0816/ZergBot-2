@@ -22,3 +22,24 @@ def test_failed_placement_cannot_freeze_economy_indefinitely():
     assert plan.reserve(frame=1571, workers=16, bases=1, threatened=False)
     assert not plan.reserve(frame=1572, workers=16, bases=1, threatened=False)
     assert not HatchFirstOpening().reserve(frame=2688, workers=16, bases=1, threatened=False)
+
+
+def test_readiness_budget_is_bounded_and_observation_closed():
+    from zergbot.opening import OpeningBudget
+
+    gate = OpeningBudget()
+    assert not gate.reserve("pool", frame=1000, needed=True, eligible=False, latest_frame=2688)
+    assert gate.reserve("pool", frame=1100, needed=True, eligible=True, latest_frame=2688)
+    assert not gate.reserve("pool", frame=1548, needed=True, eligible=True, latest_frame=2688)
+    assert not gate.reserve("pool", frame=1552, needed=True, eligible=True, latest_frame=2688)
+    assert gate.reserve("queen", frame=3000, needed=True, eligible=True, latest_frame=5600)
+    assert not gate.reserve("queen", frame=3004, needed=False, eligible=True, latest_frame=5600)
+    assert not gate.reserve("queen", frame=3100, needed=True, eligible=True, latest_frame=5600)
+
+
+def test_readiness_budget_cannot_begin_late():
+    from zergbot.opening import OpeningBudget
+
+    assert not OpeningBudget().reserve(
+        "pool", frame=2688, needed=True, eligible=True, latest_frame=2688
+    )

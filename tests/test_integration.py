@@ -206,3 +206,24 @@ def test_startup_failure_survives_library_defeat_conversion_without_error_text(t
     assert payload["termination"] == "startup_failed"
     assert payload["error_type"] == "RuntimeError"
     assert "SECRET_TOKEN" not in json.dumps(payload)
+
+
+def test_construction_and_production_events_distinguish_completion():
+    from zergbot.economy import Economy
+
+    recorder = Mock()
+    bot = SimpleNamespace(
+        telemetry=SimpleNamespace(recorder=recorder), state=SimpleNamespace(game_loop=123)
+    )
+    building = SimpleNamespace(tag=7, type_id=U.SPAWNINGPOOL)
+    asyncio.run(ZergBot.on_building_construction_started(bot, building))
+    asyncio.run(ZergBot.on_building_construction_complete(bot, building))
+    Economy.production_event(bot, U.QUEEN, 1)
+    assert [call.args[0] for call in recorder.record.call_args_list] == [
+        "construction_started",
+        "construction_completed",
+        "production_submitted",
+    ]
+    assert (
+        recorder.record.call_args_list[-1].kwargs["scope"] == "own_command_attempt_not_completion"
+    )

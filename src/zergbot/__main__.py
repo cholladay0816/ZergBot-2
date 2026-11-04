@@ -99,6 +99,11 @@ def main() -> None:
     parser.add_argument("--sample-frames", type=int, default=112)
     parser.add_argument("--max-events", type=int, default=10000)
     parser.add_argument(
+        "--opening-readiness",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.opening_readiness,
+    )
+    parser.add_argument(
         "--opening-supply", action=argparse.BooleanOptionalAction, default=defaults.opening_supply
     )
     parser.add_argument(
@@ -139,6 +144,7 @@ def main() -> None:
             roach_tech=args.roach_tech,
             opening_supply=args.opening_supply,
             hatch_first=args.hatch_first,
+            opening_readiness=args.opening_readiness,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
             queen_recovery=args.queen_recovery,

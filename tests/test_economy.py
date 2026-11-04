@@ -252,3 +252,33 @@ def test_disabled_adaptation_preserves_existing_air_threat_reserve():
     bot.units.of_type.return_value = Group()
     asyncio.run(Economy(BotConfig()).step(bot, 1))
     bot.train.assert_called_once_with(U.ROACH)
+
+
+def readiness_bot():
+    bot = economy_bot()
+    bot.townhalls.append(bot.townhalls.first)
+    bot.supply_left = 20
+    bot.units.return_value = Group()
+    bot.workers.amount = 16
+    return bot
+
+
+def test_pool_budget_prevents_later_gas_and_worker_spending():
+    bot = readiness_bot()
+    bot.state.game_loop = 1500
+    bot.structures.side_effect = lambda kind: Group()
+    bot.can_afford.side_effect = lambda kind: kind is U.EXTRACTOR
+    asyncio.run(Economy(BotConfig(opening_readiness=True)).step(bot, 1))
+    bot.train.assert_not_called()
+    bot.build.assert_not_awaited()
+
+
+def test_first_queen_reservation_precedes_warren():
+    bot = readiness_bot()
+    bot.state.game_loop = 3000
+    bot.structures.side_effect = lambda kind: (
+        Group([bot.townhalls.first]) if kind is U.SPAWNINGPOOL else Group()
+    )
+    asyncio.run(Economy(BotConfig(opening_readiness=True)).step(bot, 1))
+    bot.train.assert_called_once_with(U.QUEEN)
+    bot.build.assert_not_awaited()

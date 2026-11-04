@@ -164,6 +164,26 @@ class ZergBot(BotAI):
                 scope="own",
             )
 
+    async def on_building_construction_started(self, unit):
+        if self.telemetry:
+            self.telemetry.recorder.record(
+                "construction_started",
+                self.state.game_loop,
+                tag=unit.tag,
+                unit_type=unit.type_id.name,
+                scope="own_observed",
+            )
+
+    async def on_building_construction_complete(self, unit):
+        if self.telemetry:
+            self.telemetry.recorder.record(
+                "construction_completed",
+                self.state.game_loop,
+                tag=unit.tag,
+                unit_type=unit.type_id.name,
+                scope="own_observed",
+            )
+
     async def on_unit_type_changed(self, unit, previous_type):
         if self.telemetry:
             self.telemetry.recorder.record(
