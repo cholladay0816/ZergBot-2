@@ -75,7 +75,8 @@ def action_error_description(event, deaths):
     from sc2.ids.ability_id import AbilityId
 
     try:
-        ability = AbilityId(event["ability_id"]).name
+        member = AbilityId(event["ability_id"])
+        ability = member.name if member.value == event["ability_id"] else "unknown"
     except ValueError:
         ability = "unknown"
     try:
