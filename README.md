@@ -44,7 +44,7 @@ runs at simulation speed. Map names must match an installed `.SC2Map` file.
 - `bot.py`: frame orchestration, objective selection and one dispatch point.
 - `strategy.py`: conservative army-level defense/attack objectives.
 - `economy.py`: workers, supply, gas, expansion, spawning pool, roach warren,
-  Burrow research and roach production. At most one spending decision per step.
+  Burrow research, queens/injects and roach production. At most one spending decision per step.
 - `agents.py`: pure observations, persistent tag-indexed agent state, hysteresis,
   retry timing, and one-command-per-tag priority arbitration.
 - `integration.py`: one batched ability query per frame, current SC2 observations,
@@ -73,12 +73,12 @@ This is a testable **roach-focused foundation**, not a claim of strategic parity
 with the 2020 prototype. The original is preserved byte-for-byte in
 `legacy/zergbot2.py` for porting/reference and is excluded from lint. Its old
 multi-unit counter heuristic, ravager/lurker/infestor spells and scouting are not
-enabled in the new runtime. Queens, injects, creep, anti-air, detector-aware escape,
+enabled in the new runtime. Creep, dedicated anti-air composition, detector-aware escape,
 tunneling claws, path-aware retreat, enemy memory and richer focus-fire/kiting
 are follow-up work. The old prototype also lacked queens and creep support.
 
 The initial economy makes a playable integration target but is not tuned for
-competitive play. It has no anti-air response and rallying healthy units to home
+competitive play. It has no dedicated anti-air strategy (queens can defend locally), and rallying healthy units to home
 until the attack threshold can be strategically weak. Start with installed-map
 smoke matches, record replays, then add a second unit agent through the same
 arbiter before expanding the composition. Add action-result telemetry and
@@ -179,3 +179,32 @@ research at 218.57s. One hatchery placement was rejected with
 large mineral stockpiles and worker-heavy larva allocation before combat. These
 are starting points for controlled economy experiments, not proof of a single
 cause of defeat. Full match/replay/resource artifacts remain local.
+
+
+## Controlled economy candidate
+
+The first candidate addresses evidence from the seed-1 baseline: worker-first
+larva allocation, no queen injects, and a rejected expansion during an invasion.
+It produces one queen per ready base, injects idle eligible queens into unbuffed
+bases (one reservation per base per step), and shares the existing batched ability
+query. Larva production maintains six roaches before optional workers once at least
+20 workers exist; visible ground attacks raise the reserve to the attack threshold.
+Pending and burrowed roaches count toward the reserve. This is a deliberately small
+production policy, not a complete build-order or queen micro system.
+
+Expansions check the exact canonical location, reject nearby visible ground enemies
+or enemy structures, and retry at most every 224 game frames (~10 seconds). Blocked
+attempts do not starve other production. The game can still reject an otherwise
+valid order if conditions change before execution; those errors remain recorded.
+Inject attempts and expansion decisions are included in diagnostics.
+
+Experiment protocol: compare unchanged commit `624e407` with the candidate on
+AbyssalReefLE, Hard Terran, seeds 1/2/3, four-frame steps, `realtime=False`, a
+600-game-second cap and 180-wall-second cap. Runs are sequential, below-normal
+priority on logical CPUs 20–23, with system CPU/memory contention monitoring.
+Primary metrics fixed before candidate runs: roaches at 240/360 seconds, sampled
+larva availability, mineral accumulation, supply blocking and outcome/survival.
+Also inspect inject attempts, morph confirmations and action errors. This bundled
+candidate cannot isolate the contribution of each change; three seeds are an
+exploratory check, not a reliable win-rate estimate. Full baseline and candidate
+artifacts remain local and unchanged.

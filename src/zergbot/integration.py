@@ -29,14 +29,18 @@ class SC2UnitGateway:
     def __init__(self, bot: BotAI) -> None:
         self.bot = bot
         self.units = {}
+        self.abilities_by_tag = {}
 
-    async def observe(self) -> list[Observation]:
+    async def observe(self, extra_units=()) -> list[Observation]:
         roaches = list(self.bot.units.of_type(ROACH_TYPES))
         self.units = {unit.tag: unit for unit in roaches}
-        if not roaches:
+        queried = roaches + list(extra_units)
+        if not queried:
+            self.abilities_by_tag = {}
             return []
         # Exactly one batched query; never infer one roach's abilities from another.
-        abilities = await self.bot.get_available_abilities(roaches)
+        abilities = await self.bot.get_available_abilities(queried)
+        self.abilities_by_tag = {u.tag: set(a) for u, a in zip(queried, abilities, strict=True)}
         researched = UpgradeId.BURROW in self.bot.state.upgrades
         return [
             Observation(
@@ -48,7 +52,7 @@ class SC2UnitGateway:
                 researched,
                 observed_transition(unit),
             )
-            for unit, available in zip(roaches, abilities, strict=True)
+            for unit, available in zip(roaches, abilities[: len(roaches)], strict=True)
         ]
 
     def dispatch(self, arbiter: CommandArbiter, target: Point2, retreat: Point2) -> None:

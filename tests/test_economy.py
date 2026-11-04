@@ -25,23 +25,33 @@ class Group(list):
 
 
 def economy_bot():
-    home = SimpleNamespace(position=Point2((10, 10)))
-    return SimpleNamespace(
+    home = SimpleNamespace(position=Point2((10, 10)), has_buff=lambda _: True)
+    bot = SimpleNamespace(
         townhalls=Group([home]),
         supply_left=10,
         supply_cap=44,
         workers=SimpleNamespace(amount=20),
         gas_buildings=SimpleNamespace(amount=2),
         structures=Mock(return_value=Group([home])),
+        units=Mock(return_value=Group([home])),
+        enemy_units=Mock(),
+        enemy_structures=Mock(),
+        state=SimpleNamespace(game_loop=0),
+        get_next_expansion=AsyncMock(return_value=Point2((30, 30))),
+        can_place_single=AsyncMock(return_value=True),
         already_pending=Mock(return_value=0),
         already_pending_upgrade=Mock(return_value=1),
         can_afford=Mock(return_value=True),
         distribute_workers=AsyncMock(),
         train=Mock(return_value=1),
-        build=AsyncMock(),
+        build=AsyncMock(return_value=True),
         expand_now=AsyncMock(),
         research=Mock(return_value=True),
     )
+    bot.units.of_type.return_value = Group([home] * 6)
+    bot.enemy_units.filter.return_value.closer_than.return_value = Group()
+    bot.enemy_structures.closer_than.return_value = Group()
+    return bot
 
 
 def test_supply_priority_spends_only_once():
@@ -87,9 +97,99 @@ def test_expansion_and_roach_production_respect_base_limit():
     bot = economy_bot()
     bot.workers.amount = 22
     asyncio.run(Economy(BotConfig()).step(bot, 1))
-    bot.expand_now.assert_awaited_once()
+    bot.build.assert_awaited_once_with(
+        U.HATCHERY,
+        near=Point2((30, 30)),
+        max_distance=0,
+        random_alternative=False,
+        placement_step=1,
+    )
     bot.train.assert_not_called()
-    bot.expand_now.reset_mock()
+    bot.build.reset_mock()
     asyncio.run(Economy(BotConfig(max_bases=1)).step(bot, 2))
-    bot.expand_now.assert_not_awaited()
+    bot.build.assert_not_awaited()
     bot.train.assert_called_once_with(U.ROACH)
+
+
+def test_defensive_roaches_precede_optional_workers():
+    bot = economy_bot()
+    bot.units.of_type.return_value = Group()
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.ROACH)
+
+
+def test_pending_roaches_satisfy_reserve_without_overproduction():
+    bot = economy_bot()
+    bot.units.of_type.return_value = Group()
+    bot.already_pending.side_effect = lambda kind: 6 if kind is U.ROACH else 0
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.DRONE)
+
+
+def test_defense_reserve_increases_under_visible_attack():
+    bot = economy_bot()
+    bot.enemy_units.filter.return_value.closer_than.return_value = Group([object()])
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.ROACH)
+
+
+def test_queen_production_uses_townhall_without_consuming_larva():
+    bot = economy_bot()
+    bot.units.return_value = Group()
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.QUEEN)
+
+
+def test_queen_injects_are_available_idle_and_one_per_unbuffed_base():
+    from sc2.ids.ability_id import AbilityId as A
+
+    bot = economy_bot()
+    base = bot.townhalls.first
+    base.has_buff = lambda _: False
+    first = Mock(tag=1, orders=[], distance_to=Mock(return_value=2))
+    second = Mock(tag=2, orders=[], distance_to=Mock(return_value=3))
+    bot.units.return_value = Group([first, second])
+    economy = Economy(BotConfig())
+    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}, 2: {A.EFFECT_INJECTLARVA}})
+    first.assert_called_once_with(A.EFFECT_INJECTLARVA, base)
+    second.assert_not_called()
+    first.reset_mock()
+    first.orders = [object()]
+    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}})
+    first.assert_not_called()
+    second.assert_not_called()
+    first.orders = []
+    base.has_buff = lambda _: True
+    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}})
+    first.assert_not_called()
+
+
+def test_blocked_expansion_throttles_retries_and_does_not_spend():
+    bot = economy_bot()
+    bot.can_place_single.return_value = False
+    economy = Economy(BotConfig())
+    assert not asyncio.run(economy.try_expand(bot))
+    bot.state.game_loop = 4
+    assert not asyncio.run(economy.try_expand(bot))
+    bot.get_next_expansion.assert_awaited_once()
+    bot.build.assert_not_awaited()
+    bot.state.game_loop = 224
+    assert not asyncio.run(economy.try_expand(bot))
+    assert bot.get_next_expansion.await_count == 2
+
+
+def test_visible_enemy_blocks_expansion_before_placement_query():
+    bot = economy_bot()
+    bot.enemy_units.filter.return_value.closer_than.return_value = Group([object()])
+    assert not asyncio.run(Economy(BotConfig()).try_expand(bot))
+    bot.can_place_single.assert_not_awaited()
+    bot.build.assert_not_awaited()
+
+
+def test_failed_expansion_does_not_starve_production():
+    bot = economy_bot()
+    bot.workers.amount = 22
+    bot.can_place_single.return_value = False
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.ROACH)
+    bot.build.assert_not_awaited()

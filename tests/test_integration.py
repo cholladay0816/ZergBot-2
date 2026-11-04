@@ -139,3 +139,20 @@ def test_real_sc2_active_orders_translate_exact_and_remapped_abilities():
         ]
     )
     assert observed_transition(unit) is None  # queued morph is not active yet
+
+
+def test_queens_share_single_batched_ability_query():
+    roach, queen = unit(1), unit(2)
+    bot = SimpleNamespace(
+        units=Mock(),
+        state=SimpleNamespace(upgrades=set()),
+        get_available_abilities=AsyncMock(
+            return_value=[[A.BURROWDOWN_ROACH], [A.EFFECT_INJECTLARVA]]
+        ),
+    )
+    bot.units.of_type.return_value = [roach]
+    gateway = SC2UnitGateway(bot)
+    observations = asyncio.run(gateway.observe([queen]))
+    bot.get_available_abilities.assert_awaited_once_with([roach, queen])
+    assert len(observations) == 1
+    assert gateway.abilities_by_tag[2] == {A.EFFECT_INJECTLARVA}

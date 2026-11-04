@@ -1,4 +1,5 @@
 from sc2.bot_ai import BotAI
+from sc2.ids.unit_typeid import UnitTypeId
 
 from .agents import AgentRegistry, CommandArbiter
 from .config import BotConfig
@@ -33,7 +34,7 @@ class ZergBot(BotAI):
     async def on_step(self, iteration: int) -> None:
         if self.telemetry:
             self.telemetry.sample(self)
-        observations = await self.gateway.observe()
+        observations = await self.gateway.observe(self.units(UnitTypeId.QUEEN).ready)
         self.registry.sync(observations)
         arbiter = CommandArbiter()
         retreat = (
@@ -56,7 +57,7 @@ class ZergBot(BotAI):
         if self.telemetry:
             self.telemetry.decisions(observations, self.registry, arbiter, self.state.game_loop)
         self.gateway.dispatch(arbiter, target, retreat)
-        await self.economy.step(self, iteration)
+        await self.economy.step(self, iteration, self.gateway.abilities_by_tag)
 
     async def on_unit_created(self, unit):
         if self.telemetry:

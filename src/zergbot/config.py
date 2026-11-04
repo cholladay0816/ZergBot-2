@@ -8,6 +8,8 @@ class BotConfig:
     retry_frames: int = 8
     morph_timeout_frames: int = 64
     workers: int = 44
+    defensive_roaches: int = 6
+    expansion_retry_frames: int = 224
     attack_roaches: int = 12
     max_bases: int = 3
     game_step: int = 4
@@ -20,6 +22,8 @@ class BotConfig:
                 self.retry_frames,
                 self.morph_timeout_frames,
                 self.workers,
+                self.defensive_roaches,
+                self.expansion_retry_frames,
                 self.attack_roaches,
                 self.max_bases,
                 self.game_step,

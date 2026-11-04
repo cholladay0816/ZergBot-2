@@ -37,6 +37,7 @@ class DiagnosticConfig:
 # Values are built from explicit numeric/enum game fields at the adapter boundary.
 # Unknown fields are rejected rather than accidentally logging object reprs or secrets.
 EVENT_FIELDS = {
+    "expansion": {"reason", "location"},
     "snapshot": {
         "own",
         "visible_enemy",
@@ -286,9 +287,9 @@ def summarize(payload):
     air = [e["id"] for e in snapshots if any(u["flying"] for u in e["visible_enemy"])]
     if air:
         finding(
-            "Visible enemy air units occurred; this roach baseline has no anti-air response",
+            "Visible enemy air units occurred; roaches cannot attack air",
             air,
-            "Check sampled enemy types/timing before testing an anti-air transition.",
+            "Check enemy types, timing and queen coverage before an anti-air transition.",
         )
     if not findings:
         finding(
