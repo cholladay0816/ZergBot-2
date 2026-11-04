@@ -386,3 +386,50 @@ Local index: `.local-matches/phase4-opening-detection-comparisons.json`.
 - `20261104T213804Z-95162d3f`: SHA-256 `2f0cd88675700fbcc47084847d578c0e6e54c208c23e732ad7712c37871f335a`.
 - `20261104T212058Z-871f92c7`: SHA-256 `536bc1b2239242a78569349d584021d882417edb97b90278a1290b694291ab3b`.
 - `20261104T214121Z-7a40d22f`: SHA-256 `2686a9e2236687b6c142a084227734df4f786f3d5136f91baa5a2a236c411a74`.
+
+
+## Repeated six-versus-twelve worker participation
+
+Frozen `6b9664d`, same ten-second defense window and release correction, six attacking
+lings, one queen, twelve workers. Three approach geometries, seeds 1/2/3, two repeats per
+geometry; the second repeat reverses six/twelve run order. Both players use the two-phase
+setup barrier, ordinary visibility and actual attacks. Each run is capped at 90 seconds.
+
+| Approach | Repeat | Defender cap | Workers lost | Final mineral bank | Queen alive | Command conflicts |
+|---|---:|---:|---:|---:|---:|---:|
+| 0 | 0 | 6 | 5 | 600 | 1 | 0 |
+| 0 | 0 | 12 | 1 | 875 | 1 | 0 |
+| 1 | 0 | 6 | 6 | 520 | 1 | 0 |
+| 1 | 0 | 12 | 5 | 585 | 1 | 0 |
+| 2 | 0 | 6 | 2 | 795 | 1 | 0 |
+| 2 | 0 | 12 | 5 | 555 | 1 | 0 |
+| 0 | 1 | 12 | 3 | 720 | 1 | 0 |
+| 0 | 1 | 6 | 1 | 885 | 1 | 0 |
+| 1 | 1 | 12 | 5 | 585 | 1 | 0 |
+| 1 | 1 | 6 | 0 | 970 | 1 | 0 |
+| 2 | 1 | 12 | 6 | 500 | 1 | 0 |
+| 2 | 1 | 6 | 4 | 665 | 1 | 0 |
+
+The 6-worker cap lost 18 workers across six runs, averaging 3.00; mean final mineral bank 739.2.
+
+The 12-worker cap lost 25 workers across six runs, averaging 4.17; mean final mineral bank 636.7.
+
+
+The larger pull is not promoted. It helps in two first-pass approaches but loses more
+workers in every reversed-order repeat. Identical seed/geometry trials still vary, so a
+single favorable case would overstate the evidence. Neither setting is ideal micro, and
+these capped isolated scenarios are not full-match wins. The participation parameter
+remains an experiment; production worker-defense defaults remain unchanged.
+Local index: `.local-matches/phase4-worker-participation-comparisons.json`.
+- `scenario-20261104T214703Z-lings-micro0`: defender SHA-256 `7beb0f1238b3db119f48d22f50ccb8aec6915b03e70868cb35661783114af3d6`.
+- `scenario-20261104T214733Z-lings-micro0`: defender SHA-256 `0d638e84ea7eecdc85a0e0d39c3f23dce4d4612c2168c2298d0581c52b13c89f`.
+- `scenario-20261104T214804Z-lings-micro1`: defender SHA-256 `beadca6a0a5ad9cb01c0c8aa7a632fba35351c715890b819b2284387b0222228`.
+- `scenario-20261104T214834Z-lings-micro1`: defender SHA-256 `7c3b38b6338d605749f397b5c1fd6806e7268e359db33ddd444c3618768f697b`.
+- `scenario-20261104T214904Z-lings-micro2`: defender SHA-256 `eeb4597ea6b51e1a19ddc4150d2fff65aa8df5e95af4ef2f5f04e88973eb9e33`.
+- `scenario-20261104T214935Z-lings-micro2`: defender SHA-256 `cd61faf90a372771d49425682879536287bf8a928c445d23d6740f4e2ad46752`.
+- `scenario-20261104T215005Z-lings-micro0`: defender SHA-256 `54caa2dd9193888d9e0dfc10dc05315b065a9c48bd11d945267c0931d2d2fb3d`.
+- `scenario-20261104T215036Z-lings-micro0`: defender SHA-256 `6ad71a1a7d59282bc59e9f4fb1e2f9092a36966973a053edd8e97965d4c3a6c5`.
+- `scenario-20261104T215106Z-lings-micro1`: defender SHA-256 `69555a6749fdee13dd3e0312584365e9210d52349b154a226c4db8ef717282cd`.
+- `scenario-20261104T215136Z-lings-micro1`: defender SHA-256 `4de875ab10486d65f3a9c54198e138c074c875e4b7e5f879292c7f9aadfe731a`.
+- `scenario-20261104T215207Z-lings-micro2`: defender SHA-256 `b014a731fa73944227bed4f5a4bd1b5525661070b4cf194e080d2cf624093f89`.
+- `scenario-20261104T215237Z-lings-micro2`: defender SHA-256 `d0126e5310f44b45c0bbe855425e94880e58a29e118a91486a37e2be2a236898`.
