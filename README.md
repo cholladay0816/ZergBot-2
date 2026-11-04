@@ -24,8 +24,10 @@ The lock is platform/runtime specific, not a cross-platform guarantee.
 
 Install StarCraft II and an official/otherwise trusted melee map separately.
 On this host SC2 was found at `G:\StarCraft II` (versions Base97563 and Base98310),
-but no maps were found in its `Maps` directory or the user's standard Documents
-map directory. Nothing here downloads maps or launches the game on import.
+and Abyssal Reef is now installed in `G:\StarCraft II\Maps\AbyssalReefLE.SC2Map`.
+It was extracted after user license acceptance from Blizzard's official
+`https://blzdistsc2-a.akamaihd.net/MapPacks/Ladder2017Season1.zip`.
+Map SHA-256: `355bcb67a337d2fa603e63e887c9c2105d894c154c1a8796a683a1a6b530c176`. Nothing here downloads maps or launches the game on import.
 
 ```powershell
 $env:SC2PATH = 'G:\StarCraft II'
@@ -85,9 +87,68 @@ observed transition tests before introducing more spell/morph behavior.
 Offline tests cover boundaries, missing research/abilities, failed-action retries,
 morph continuity, stale agents, command conflicts, the mocked SC2 boundary, actual SC2 Unit command enqueueing, and economy spending priorities.
 These do not validate navigation, healing rates, actual server command acceptance,
-or a complete match. **No live match has been run in this refactor session.**
+or a complete match. An accelerated 180-game-second smoke run on SC2 **5.0.17.98310**, Hard Terran,
+seed 1 completed at its time limit with a replay and no runtime/action errors.
+Observed game time / full match wall time was **5.23x** (180s / 34.40s including
+startup); this is a measurement, not a guaranteed multiplier. It verified startup,
+economy and recording, but ended before roach micro/combat was exercised.
 
 Primary API references:
 - https://pypi.org/project/burnysc2/7.3.0/
 - https://burnysc2.github.io/python-sc2/bot_ai/index.html
 - https://burnysc2.github.io/python-sc2/unit/index.html
+
+
+## Detailed match diagnostics
+
+The normal launcher writes a unique directory under ignored `.local-matches/`:
+`match.json` (structured evidence), `report.md` (evidence-linked findings/next
+experiments), and `match.SC2Replay` when the client can save it. Full artifacts
+stay local and are not committed. A caught failure writes a final report with its
+exception class (not arbitrary exception text). Background checkpoints preserve
+partial evidence every 30 wall seconds; abrupt process termination may lose the
+latest interval. Startup failure may leave no replay. An artificial time-limit
+Tie is distinguished from a completed competitive match.
+
+```powershell
+.\.venv\Scripts\python.exe -m zergbot --seed 1 --game-time-limit 600
+.\.venv\Scripts\python.exe -m zergbot.report .local-matches\MATCH-ID\match.json
+```
+
+`--sample-frames` defaults to 112 game frames (~5 game seconds), `--max-events`
+to 10,000 retained events, and `--no-diagnostics` disables capture/replays.
+`DiagnosticConfig` also bounds per-frame events (128), damage details (16/frame),
+unit details (96 per side/sample), and checkpoint cadence. Repeated movement and
+attack attempts are counted but detailed only when decisions change; morph attempts
+remain detailed. Ring-buffer eviction and truncation are explicitly reported.
+There is at most one asynchronous disk-write task, never a growing write queue.
+Measured instrumentation time excludes background serialization/disk I/O.
+
+Evidence includes own resource/supply/production/upgrade timelines, counts,
+positions, observed creation/destruction/morph events, roach reasons and recovery
+state, command attempts, observed active orders and API action errors. Unit detail
+includes buffs, cloak state, detector presence, terrain height, base weapon ranges,
+and own cooldowns/targets/orders. Visible effects include owner, radius and positions.
+Destruction events can include worker consumption for construction; they are not
+automatically credited as combat kills.
+
+Damage records describe observed own HP/shield loss and nearby visible candidate
+attackers with current distance and terrain-height difference. These are **ambiguous
+correlations**, not exact attribution: projectiles, spells, fog, regeneration,
+self-damage and multiple attackers prevent universal causal reconstruction.
+Fatal-frame loss callbacks may be absent. Range candidates use unupgraded base range
+plus collision radii and a three-unit motion margin. Effect owner is not caster
+identity; observing a buff/effect does not prove who cast it. Height differences
+are not treated as a universal damage bonus.
+
+Enemy detail is restricted to **currently visible units**. Enemy orders, cooldowns
+and engaged-target fields are null because the protocol does not populate them.
+Missing optional fields remain null; snapshots under fog are excluded. No enemy
+economy, unseen casts, or total opponent visibility is invented. A future separate
+replay/observer pass with disabled fog can expand post-match evidence, but has not
+been implemented or fed into competitive decisions. Chat, environment variables,
+credentials and arbitrary object/exception representations are not captured.
+
+Reports propose controlled next experiments tied to event IDs. Compare the same
+map, seed and difficulty, inspect replay alongside telemetry, change one behavior,
+and compare multiple runs before drawing causal conclusions from win/loss results.

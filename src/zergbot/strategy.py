@@ -13,4 +13,6 @@ class ArmyStrategy:
         action = (
             Action.ATTACK if under_attack or healthy >= config.attack_roaches else Action.RETREAT
         )
-        return [Intent(u.tag, action, 10) for u in units]
+        return [
+            Intent(u.tag, action, 10, "defend" if under_attack else "army_objective") for u in units
+        ]

@@ -30,6 +30,7 @@ class Intent:
     tag: int
     action: Action
     priority: int
+    reason: str = "unspecified"
 
 
 class CommandArbiter:
@@ -77,7 +78,7 @@ class RoachAgent:
             if completed:
                 self.pending_morph = None
             elif frame - self.last_attempt_frame < config.morph_timeout_frames:
-                return Intent(self.tag, Action.WAIT, 100)
+                return Intent(self.tag, Action.WAIT, 100, "morph_in_flight")
             else:
                 # A continuously stale order must not restart this timer. After
                 # timeout, retry if available, otherwise retreat exposed / wait hidden.
@@ -85,18 +86,22 @@ class RoachAgent:
         if not self.recovering:
             return None
         ready = frame - self.last_attempt_frame >= config.retry_frames
+        reason = "healing"
         if obs.burrowed:
             action = Action.WAIT
             if obs.health >= config.emerge_health and obs.can_emerge and ready:
                 action = Action.EMERGE
+                reason = "recovered"
         elif obs.burrow_researched and obs.can_burrow:
             action = Action.BURROW if ready else Action.WAIT
+            reason = "low_health" if ready else "retry_interval"
         else:
             action = Action.RETREAT
+            reason = "burrow_unavailable" if obs.burrow_researched else "burrow_unresearched"
         if action in (Action.BURROW, Action.EMERGE):
             self.last_attempt_frame = frame
             self.pending_morph = action
-        return Intent(self.tag, action, 100)
+        return Intent(self.tag, action, 100, reason)
 
 
 class AgentRegistry:
