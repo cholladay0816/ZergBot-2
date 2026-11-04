@@ -30,6 +30,13 @@ Abyssal Reef was installed at `G:\StarCraft II\Maps\AbyssalReefLE.SC2Map` from
 after the user accepted its AI and Machine Learning License. Map SHA-256:
 `355bcb67a337d2fa603e63e887c9c2105d894c154c1a8796a683a1a6b530c176`.
 
+## Economy, queens and scouting extension
+
+The next phase adds capacity-aware workers (up to 66), extra queen roles, conditional macro
+hatcheries, and conservative live scouting. Mutalisk viability is advisory only; no speculative
+transition is purchased. See [policy, controls and dated build-order references](docs/economy-queens-scouting.md)
+and [phase results](docs/phase2-experiments.md) for measured behavior and limitations.
+
 ## Current behavior
 
 - Roaches recover at 40% HP and normally resurface at 80%, with separate thresholds
@@ -69,7 +76,9 @@ Fixed seeds improve repeatability without promising bit-for-bit engine determini
 | `bot.py` | Frame orchestration, objectives and lifecycle callbacks |
 | `strategy.py` | Army posture and optional bounded worker-defense assignments |
 | `search.py` | Bounded, visibility-gated search of known map expansion sites |
-| `economy.py` | Spending, production, supply, research, queens and expansions |
+| `economy.py`, `macro.py` | Adaptive capacity, spending, production and expansion gates |
+| `queens.py` | Persistent inject assignments, defense and bounded creep actions |
+| `scouting.py` | Live scouting memory and advisory mutalisk feasibility |
 | `agents.py` | Pure per-unit state/decisions and one-command-per-tag arbitration |
 | `integration.py` | SC2 translation and one batched ability query for roaches/queens |
 | `telemetry.py`, `diagnostics.py` | Explicit observation fields, bounded capture/checkpoints |

@@ -91,3 +91,34 @@ def test_advisory_event_serializes_without_leaking_hidden_information(tmp_path):
     )
     assert recorder.payload()["metadata"]["opponent_race"] == "Protoss"
     assert recorder.events[0]["visible_workers"] is None
+
+
+def test_scout_controller_ignores_fog_snapshots_and_records_unknown(tmp_path):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from zergbot.diagnostics import MatchDiagnostics
+
+    class Group(list):
+        @property
+        def ready(self):
+            return self
+
+    recorder = MatchDiagnostics(tmp_path, {})
+    bot = SimpleNamespace(
+        state=SimpleNamespace(game_loop=0),
+        enemy_units=[SimpleNamespace(is_visible=False)],
+        enemy_structures=[],
+        townhalls=Group(),
+        workers=SimpleNamespace(amount=12),
+        minerals=50,
+        vespene=0,
+        units=Mock(),
+        telemetry=SimpleNamespace(recorder=recorder),
+    )
+    bot.units.of_type.return_value = SimpleNamespace(amount=0)
+    manager = ScoutManager(BotConfig())
+    manager.step(bot)
+    assert not manager.sites and not manager.defenses
+    assert recorder.events[-1]["verdict"] == "unknown_no_mineral_line"
+    assert recorder.events[-1]["visible_workers"] is None

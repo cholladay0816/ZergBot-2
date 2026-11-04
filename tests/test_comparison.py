@@ -73,3 +73,11 @@ def test_destruction_metrics_distinguish_retained_from_lifetime_counts():
     assert newer["own_roachburrowed_destructions"] == 20
     assert newer["own_roach_destructions"] == 3
     assert newer["destruction_count_scope"] == "lifetime_recorded"
+
+
+def test_opponent_race_must_match_even_when_map_seed_and_difficulty_match():
+    baseline, candidate = match(), match()
+    baseline["metadata"]["opponent_race"] = "Terran"
+    candidate["metadata"]["opponent_race"] = "Protoss"
+    with pytest.raises(ValueError, match="opponent_race"):
+        compare_pair(baseline, candidate)

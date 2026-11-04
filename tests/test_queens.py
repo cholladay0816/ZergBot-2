@@ -111,3 +111,57 @@ def test_step_injects_once_and_reserves_injector_from_creep(tmp_path):
     queen.orders = [object()]
     asyncio.run(manager.step(bot, {1: {A.EFFECT_INJECTLARVA}}))
     queen.assert_not_called()
+
+
+def test_creep_placement_has_one_group_budget_and_no_injector_conflict(tmp_path):
+    import asyncio
+    from unittest.mock import AsyncMock, Mock
+
+    from sc2.ids.ability_id import AbilityId as A
+    from sc2.position import Point2
+
+    from zergbot.diagnostics import MatchDiagnostics
+
+    class Units(list):
+        @property
+        def ready(self):
+            return self
+
+        def filter(self, pred):
+            return Units(u for u in self if pred(u))
+
+        def closer_than(self, distance, unit):
+            return Units()
+
+    base = SimpleNamespace(tag=20, position=Point2((10, 10)), has_buff=lambda _: False)
+    queens = [
+        Mock(
+            tag=i,
+            orders=[],
+            health_percentage=1,
+            is_idle=True,
+            distance_to=Mock(return_value=i),
+            position=Point2((10 + i, 10)),
+        )
+        for i in (1, 2, 3)
+    ]
+    recorder = MatchDiagnostics(tmp_path, {})
+    bot = SimpleNamespace(
+        townhalls=Units([base]),
+        units=Mock(return_value=Units(queens)),
+        structures=Mock(return_value=Units()),
+        enemy_units=Units(),
+        state=SimpleNamespace(game_loop=0),
+        telemetry=SimpleNamespace(recorder=recorder),
+        find_placement=AsyncMock(return_value=Point2((15, 10))),
+        game_info=SimpleNamespace(map_center=Point2((50, 50))),
+    )
+    manager = QueenManager(BotConfig())
+    abilities = {i: {A.EFFECT_INJECTLARVA, A.BUILD_CREEPTUMOR_QUEEN} for i in (1, 2, 3)}
+    asyncio.run(manager.step(bot, abilities))
+    queens[0].assert_called_once_with(A.EFFECT_INJECTLARVA, base)
+    queens[1].assert_called_once_with(A.BUILD_CREEPTUMOR_QUEEN, Point2((15, 10)))
+    queens[2].assert_not_called()
+    bot.find_placement.assert_awaited_once()
+    assert recorder.command_counts["INJECT"] == 1
+    assert recorder.command_counts["QUEEN_CREEP"] == 1
