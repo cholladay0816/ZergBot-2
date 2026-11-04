@@ -225,6 +225,29 @@ class Defender(MeasuredBot):
             self.record(
                 "defender_sample",
                 workers=self.workers.amount,
+                worker_state=[
+                    dict(
+                        tag=int(w.tag),
+                        position=list(w.position),
+                        health=float(w.health),
+                        own_cooldown=float(w.weapon_cooldown),
+                        gathering=bool(w.is_gathering),
+                        returning=bool(w.is_returning),
+                        orders=[
+                            dict(
+                                ability=int(o.ability.id),
+                                target=int(o.target) if isinstance(o.target, int) else None,
+                            )
+                            for o in w.orders
+                        ],
+                    )
+                    for w in self.workers
+                ],
+                worker_defense_elapsed=(
+                    int(self.state.game_loop - self.worker_defense_start)
+                    if self.worker_defense_start is not None
+                    else None
+                ),
                 queens=[
                     dict(
                         tag=int(q.tag),
@@ -275,6 +298,7 @@ class Defender(MeasuredBot):
                 worker.distance_to(threat),
                 worker.tag in selected,
                 self.state.game_loop - self.worker_defense_start,
+                max_frames=int(self.options.worker_defense_seconds * 22.4),
             )
             if action == "evacuate":
                 safe = max(minerals, key=lambda m: min(m.distance_to(t) for t in threats))
@@ -537,7 +561,10 @@ def main():
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--worker-safety", action="store_true")
+    parser.add_argument("--worker-defense-seconds", type=int, default=10)
     args = parser.parse_args()
+    if not 1 <= args.worker_defense_seconds <= 60:
+        parser.error("worker defense duration must be 1-60 game seconds")
     output = Path(".local-matches") / (
         "scenario-"
         + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
