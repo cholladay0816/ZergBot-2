@@ -136,7 +136,7 @@ Partial replay passes retain their own failure/timeout artifacts.
 
 ## Validation and remaining work
 
-The November 4, 2026 checkpoint passed **139 offline tests**, lint/format checks,
+The November 4, 2026 checkpoint passed **152 offline tests**, lint/format checks,
 compilation, dependency checks and wheel validation. Tests cover pure decisions,
 morph continuity/timeouts, capability fallbacks, command arbitration, real SC2 command
 construction, economy priorities, diagnostic bounds/privacy, replay provenance, CLI
@@ -156,3 +156,8 @@ Primary API references: [BurnySC2 7.3.0](https://pypi.org/project/burnysc2/7.3.0
 [BotAI](https://burnysc2.github.io/python-sc2/bot_ai/index.html),
 [Unit](https://burnysc2.github.io/python-sc2/unit/index.html),
 [Blizzard protocol](https://github.com/Blizzard/s2client-proto).
+
+Experimental visible-detector recovery is available via `--avoid-detected-burrow` and defaults off.
+Its three matched Harder race probes yielded two defeats and one unresolved cap, so it was not
+promoted. It requires observed detection coverage and a nearby ground threat; it cannot infer
+unseen detectors or exact damage sources. See the [phase ledger](docs/phase2-experiments.md).

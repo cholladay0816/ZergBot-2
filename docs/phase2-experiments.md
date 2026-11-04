@@ -112,4 +112,42 @@ Primary metrics: completed win/defeat/cap outcomes, own roach destruction observ
 burrow/emergence counts, and decision activation. Compare against the existing frozen 85e4165
 Harder seed-1 runs for all three races at 1200 game seconds/300 wall seconds, identical map,
 SC2/Python seeds, versions and step size. Do not promote from a single favorable result.
-Offline candidate validation: 150 tests and Ruff lint/format passed. Results pending.
+Offline candidate validation: 150 tests initially; 152 after integration/serialization coverage. Ruff lint/format, compile, dependency, isolated build and built-wheel imports passed.
+
+### Frozen detector-policy results
+
+Baseline runtime `85e416570e29c88a7c4440d5475d8ba859a3f32f`; candidate runtime
+`1b85f45cd311ef72e1dcac66096cffd2050c9091` with `--avoid-detected-burrow`.
+The later `05f5cff` checkpoint adds tests only. All other configuration values and match
+metadata were checked for equality. Three races, seed 1 each; this is exploratory, not a win-rate estimate.
+
+| Race | Baseline result / seconds | Candidate result / seconds | Total roach destructions B -> C | Burrowed destructions B -> C | Confirmed emergences B -> C |
+| --- | --- | --- | --- | --- | --- |
+| Terran | Defeat / 868.39 | Defeat / 1192.50 | 230 -> 313 | 153 -> 85 | 18 -> 74 |
+| Protoss | Defeat / 826.43 | Defeat / 826.43 | 185 -> 185 | 126 -> 126 | 21 -> 21 |
+| Zerg | Defeat / 1041.25 | Capped (unresolved) / 1200.00 | 292 -> 318 | 227 -> 60 | 60 -> 244 |
+
+**Decision: retain the implementation as opt-in; do not enable by default.**
+The candidate has zero wins, two defeats and one unresolved cap. Lower burrowed losses
+partly shift deaths above ground; total endpoint losses are also affected by match duration.
+Terran survived longer but lost its economy. Zerg maintained a substantial economy longer
+but encountered visible Mutalisks and did not finish within the cap. Protoss reproduced the
+baseline game exactly with zero detector-policy activations. None establishes a reliable outcome gain.
+The older `--burrow-escape-frames` damage-triggered experiment remains zero/off throughout.
+
+Lifetime detection-related decision changes: Terran 35 EMERGE / 283 RETREAT; Protoss zero;
+Zerg 95 EMERGE / 653 RETREAT / 4 unavailable-emergence WAIT. These are changes/attempts,
+not confirmed successful escapes. Bounded detailed-event evictions were 4457/1987/10161;
+lifetime counters and sampled timeline remain available. Instrumentation time was
+3.54/2.16/4.05 seconds across 265.09/158.91/265.77 wall-second matches.
+
+Candidate artifact directories under `.local-matches/`: `20261104T190153Z-ebb69467`,
+`20261104T190631Z-6e98acd3`, `20261104T190923Z-3e13d849`. Each contains match JSON, report and replay.
+Private validated comparisons: `.local-matches/phase2-detection-comparison.json`;
+full metrics/hash index: `.local-matches/phase2-detection-results.json`.
+
+Final default-path validation (`05f5cff`, detector option off): Hard Protoss seed 1 won at
+586.607 seconds, exactly reproducing the 85e4165 result. Both recorded 32 inject attempts,
+26 burrows / 25 emergences, one total roach destruction and zero action errors. The explicit
+metadata comparison passed; wall times were 101.22 versus 103.20 seconds. This is a regression
+check, not an independent win-rate sample. Artifact: `.local-matches/20261104T191404Z-2bb96f52`.
