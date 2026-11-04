@@ -19,6 +19,7 @@ def test_invalid_experiment_controls_fail_before_game_launch(monkeypatch, capsys
 
 def test_library_converted_startup_failure_returns_nonzero_exit(monkeypatch, tmp_path):
     import json
+    from unittest.mock import create_autospec
 
     import sc2.main
     import sc2.maps
@@ -31,8 +32,11 @@ def test_library_converted_startup_failure_returns_nonzero_exit(monkeypatch, tmp
         return Result.Defeat
 
     monkeypatch.setattr(sc2.maps, "get", lambda name: object())
-    monkeypatch.setattr(sc2.main, "run_game", converted_failure)
-    monkeypatch.setattr(sys, "argv", ["zergbot2", "--diagnostics-dir", str(tmp_path)])
+    launcher = create_autospec(sc2.main.run_game, side_effect=converted_failure)
+    monkeypatch.setattr(sc2.main, "run_game", launcher)
+    monkeypatch.setattr(
+        sys, "argv", ["zergbot2", "--diagnostics-dir", str(tmp_path), "--search-expansions"]
+    )
     with pytest.raises(SystemExit) as error:
         main()
     assert error.value.code == 1

@@ -114,7 +114,6 @@ def main() -> None:
             ],
             realtime=args.realtime,
             random_seed=args.seed,
-            search_expansions=args.search_expansions,
             game_time_limit=args.game_time_limit,
             save_replay_as=str(directory / "match.SC2Replay") if not args.no_diagnostics else None,
         )
