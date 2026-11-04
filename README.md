@@ -52,7 +52,14 @@ Roaches enter recovery at **40% health**, burrow only when research is complete
 and that individual unit reports the ability available, and emerge at **80%**.
 Between thresholds they remain in recovery. If burrow is unavailable, an exposed
 roach retreats toward the selected home objective; a burrowed roach waits
-when emergence is unavailable. Morph commands retry after eight game frames.
+when emergence is unavailable. A pending morph vetoes other orders while awaiting the observed type change and
+active morph-order completion, even when abilities disappear during the transition.
+The gateway recognizes both exact and remapped active burrow/unburrow order IDs.
+A configurable **64-game-frame timeout** bounds rejected/stalled attempts; after
+timeout the agent retries an available morph or retreats if exposed (waits if hidden).
+Continuous stale orders do not reset that timer. An eight-frame minimum command
+interval also prevents rapid opposite transitions. The timeout is a conservative
+controller default, not a measured live-game animation guarantee.
 State follows the stable unit tag through `ROACH`/`ROACHBURROWED` transitions and
 is pruned when the tag disappears. Commands do not imply a successful morph;
 the following observations are authoritative. Survival intents override strategy,
@@ -76,7 +83,7 @@ arbiter before expanding the composition. Add action-result telemetry and
 observed transition tests before introducing more spell/morph behavior.
 
 Offline tests cover boundaries, missing research/abilities, failed-action retries,
-morph continuity, stale agents, command conflicts the mocked SC2 boundary, actual SC2 Unit command enqueueing, and economy spending priorities.
+morph continuity, stale agents, command conflicts, the mocked SC2 boundary, actual SC2 Unit command enqueueing, and economy spending priorities.
 These do not validate navigation, healing rates, actual server command acceptance,
 or a complete match. **No live match has been run in this refactor session.**
 

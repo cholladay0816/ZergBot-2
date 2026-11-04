@@ -41,16 +41,16 @@ def test_missing_emerge_and_retry_cooldown():
     assert agent.decide(obs(1, True, can_emerge=False), 0, C).action is Action.WAIT
     assert agent.decide(obs(1, True), 1, C).action is Action.EMERGE
     assert agent.decide(obs(1, True), 2, C).action is Action.WAIT
-    assert agent.decide(obs(1, True), 9, C).action is Action.EMERGE
+    assert agent.decide(obs(1, True), 65, C).action is Action.EMERGE
 
 
 def test_failed_burrow_retries_and_retreat_keeps_recovery_state():
     agent = RoachAgent(1)
     assert agent.decide(obs(), 0, C).action is Action.BURROW
     assert agent.decide(obs(), 4, C).action is Action.WAIT
-    assert agent.decide(obs(), 8, C).action is Action.BURROW
-    assert agent.decide(obs(0.6, can_burrow=False), 12, C).action is Action.RETREAT
-    assert agent.decide(obs(0.8), 16, C) is None
+    assert agent.decide(obs(), 64, C).action is Action.BURROW
+    assert agent.decide(obs(0.6, can_burrow=False), 128, C).action is Action.RETREAT
+    assert agent.decide(obs(0.8), 132, C) is None
 
 
 def test_identity_survives_morph_and_dead_agents_are_pruned():
@@ -91,3 +91,58 @@ def test_invalid_thresholds(low, high):
 def test_mismatched_tag_is_rejected():
     with pytest.raises(ValueError):
         RoachAgent(3).decide(obs(), 0, C)
+
+
+@pytest.mark.parametrize("observed_order", [None, Action.BURROW])
+def test_pending_burrow_cannot_be_interrupted_by_unavailable_ability(observed_order):
+    from dataclasses import replace
+
+    agent = RoachAgent(1)
+    assert agent.decide(obs(), 0, C).action is Action.BURROW
+    for frame in (4, 8, 16, 32):
+        transitional = replace(obs(can_burrow=False), transition=observed_order)
+        intent = agent.decide(transitional, frame, C)
+        assert intent.action is Action.WAIT
+        arbiter = CommandArbiter()
+        arbiter.submit(intent)
+        arbiter.submit(Intent(1, Action.ATTACK, 10))
+        assert arbiter.commands[1].action is Action.WAIT
+    assert agent.decide(obs(0.5, True), 36, C).action is Action.WAIT
+    assert agent.pending_morph is None
+
+
+def test_emergence_waits_for_active_order_to_clear_even_after_type_changes():
+    from dataclasses import replace
+
+    agent = RoachAgent(1)
+    assert agent.decide(obs(0.8, True), 0, C).action is Action.EMERGE
+    assert agent.decide(obs(0.8, True, can_emerge=False), 4, C).action is Action.WAIT
+    exposed = replace(obs(0.8), transition=Action.EMERGE)
+    assert agent.decide(exposed, 16, C).action is Action.WAIT
+    assert agent.decide(obs(0.8), 32, C) is None
+    assert agent.pending_morph is None
+
+
+@pytest.mark.parametrize("available,expected", [(True, Action.BURROW), (False, Action.RETREAT)])
+def test_rejected_command_has_bounded_wait(available, expected):
+    agent = RoachAgent(1)
+    agent.decide(obs(), 0, C)
+    assert agent.decide(obs(can_burrow=available), 63, C).action is Action.WAIT
+    assert agent.decide(obs(can_burrow=available), 64, C).action is expected
+
+
+def test_stale_observed_order_does_not_restart_timeout():
+    from dataclasses import replace
+
+    agent = RoachAgent(1)
+    stalled = replace(obs(can_burrow=False), transition=Action.BURROW)
+    # Also protects a transition observed before this controller issued anything.
+    assert agent.decide(stalled, 0, C).action is Action.WAIT
+    assert agent.decide(stalled, 63, C).action is Action.WAIT
+    assert agent.decide(stalled, 64, C).action is Action.RETREAT
+    assert agent.decide(stalled, 68, C).action is Action.RETREAT
+
+
+def test_invalid_morph_timeout():
+    with pytest.raises(ValueError):
+        BotConfig(morph_timeout_frames=0)

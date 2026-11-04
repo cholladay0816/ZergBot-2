@@ -6,6 +6,7 @@ class BotConfig:
     burrow_health: float = 0.40
     emerge_health: float = 0.80
     retry_frames: int = 8
+    morph_timeout_frames: int = 64
     workers: int = 44
     attack_roaches: int = 12
     max_bases: int = 3
@@ -16,7 +17,12 @@ class BotConfig:
             raise ValueError("Require 0 < burrow_health < emerge_health <= 1")
         if (
             min(
-                self.retry_frames, self.workers, self.attack_roaches, self.max_bases, self.game_step
+                self.retry_frames,
+                self.morph_timeout_frames,
+                self.workers,
+                self.attack_roaches,
+                self.max_bases,
+                self.game_step,
             )
             < 1
         ):

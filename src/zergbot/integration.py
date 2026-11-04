@@ -5,10 +5,24 @@ from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.upgrade_id import UpgradeId
 from sc2.position import Point2
+from sc2.unit import Unit
 
 from .agents import Action, CommandArbiter, Observation
 
 ROACH_TYPES = {UnitTypeId.ROACH, UnitTypeId.ROACHBURROWED}
+
+
+def observed_transition(unit: Unit) -> Action | None:
+    # Only the active order, not queued future orders, describes a transition.
+    orders = unit.orders
+    if not orders:
+        return None
+    ids = {orders[0].ability.id, orders[0].ability.exact_id}
+    if ids & {AbilityId.BURROWDOWN, AbilityId.BURROWDOWN_ROACH}:
+        return Action.BURROW
+    if ids & {AbilityId.BURROWUP, AbilityId.BURROWUP_ROACH}:
+        return Action.EMERGE
+    return None
 
 
 class SC2UnitGateway:
@@ -32,6 +46,7 @@ class SC2UnitGateway:
                 AbilityId.BURROWDOWN_ROACH in available,
                 AbilityId.BURROWUP_ROACH in available,
                 researched,
+                observed_transition(unit),
             )
             for unit, available in zip(roaches, abilities, strict=True)
         ]

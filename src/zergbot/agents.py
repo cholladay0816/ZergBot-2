@@ -22,6 +22,7 @@ class Observation:
     can_burrow: bool = False
     can_emerge: bool = False
     burrow_researched: bool = False
+    transition: Action | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,8 @@ class RoachAgent:
     tag: int
     recovering: bool = False
     last_attempt_frame: int = -1000000
+    pending_morph: Action | None = None
+    previous_transition: Action | None = None
 
     def decide(self, obs: Observation, frame: int, config: BotConfig) -> Intent | None:
         if obs.tag != self.tag:
@@ -59,6 +62,26 @@ class RoachAgent:
             self.recovering = True
         if not obs.burrowed and obs.health >= config.emerge_health:
             self.recovering = False
+        # A sent command is only an attempt. Protect its observation-latency and
+        # animation window, even if available abilities temporarily disappear.
+        new_order = obs.transition is not None and obs.transition != self.previous_transition
+        self.previous_transition = obs.transition
+        if self.pending_morph is None and new_order:
+            self.pending_morph = obs.transition
+            self.last_attempt_frame = frame
+        if self.pending_morph is not None:
+            completed = (
+                (self.pending_morph is Action.BURROW and obs.burrowed)
+                or (self.pending_morph is Action.EMERGE and not obs.burrowed)
+            ) and obs.transition is not self.pending_morph
+            if completed:
+                self.pending_morph = None
+            elif frame - self.last_attempt_frame < config.morph_timeout_frames:
+                return Intent(self.tag, Action.WAIT, 100)
+            else:
+                # A continuously stale order must not restart this timer. After
+                # timeout, retry if available, otherwise retreat exposed / wait hidden.
+                self.pending_morph = None
         if not self.recovering:
             return None
         ready = frame - self.last_attempt_frame >= config.retry_frames
@@ -72,6 +95,7 @@ class RoachAgent:
             action = Action.RETREAT
         if action in (Action.BURROW, Action.EMERGE):
             self.last_attempt_frame = frame
+            self.pending_morph = action
         return Intent(self.tag, action, 100)
 
 

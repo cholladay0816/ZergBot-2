@@ -14,6 +14,7 @@ from zergbot.integration import ROACH_TYPES, SC2UnitGateway
 
 def unit(tag, burrowed=False, health_max=100):
     result = Mock()
+    result.orders = []
     result.tag = tag
     result.health = 40
     result.health_max = health_max
@@ -106,3 +107,35 @@ def test_real_sc2_unit_enqueues_one_protocol_command():
     assert command.ability is A.BURROWDOWN_ROACH
     assert command.unit.tag == 7
     assert command.target is None
+
+
+def test_real_sc2_active_orders_translate_exact_and_remapped_abilities():
+    from s2clientprotocol.raw_pb2 import Unit as RawUnit
+    from s2clientprotocol.raw_pb2 import UnitOrder as RawOrder
+    from sc2.unit import Unit
+
+    from zergbot.integration import observed_transition
+
+    for exact, remapped, expected in [
+        (A.BURROWDOWN_ROACH, A.BURROWDOWN, Action.BURROW),
+        (A.BURROWUP_ROACH, A.BURROWUP, Action.EMERGE),
+        (A.BURROWDOWN, A.BURROWDOWN, Action.BURROW),
+        (A.BURROWUP, A.BURROWUP, Action.EMERGE),
+    ]:
+        bot = SimpleNamespace(
+            state=SimpleNamespace(game_loop=4),
+            game_data=SimpleNamespace(
+                abilities={exact.value: SimpleNamespace(id=remapped, exact_id=exact)}
+            ),
+        )
+        unit = Unit(
+            RawUnit(tag=7, unit_type=U.ROACH.value, orders=[RawOrder(ability_id=exact.value)]), bot
+        )
+        assert observed_transition(unit) is expected
+    unit = Mock(
+        orders=[
+            SimpleNamespace(ability=SimpleNamespace(id=A.ATTACK, exact_id=A.ATTACK)),
+            SimpleNamespace(ability=SimpleNamespace(id=A.BURROWDOWN, exact_id=A.BURROWDOWN_ROACH)),
+        ]
+    )
+    assert observed_transition(unit) is None  # queued morph is not active yet
