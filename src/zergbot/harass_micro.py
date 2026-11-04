@@ -4,6 +4,56 @@ import math
 
 from sc2.position import Point2
 
+HARASS_EVENT_FIELDS = {
+    "hellion_route": {"tag", "target", "query_distance", "scope"},
+    "hellion_decision": {
+        "tag",
+        "reason",
+        "position",
+        "health",
+        "own_cooldown",
+        "target_tag",
+        "target_position",
+        "estimated_line_overlap",
+        "worker_distance",
+    },
+    "adept_phase": {
+        "stage",
+        "tag",
+        "shade_tag",
+        "mode",
+        "position",
+        "previous_position",
+        "target_position",
+        "ability",
+        "cast_frame",
+        "shade_seen_frame",
+        "elapsed_frames",
+        "jump_distance",
+        "cancel_frame",
+        "association",
+    },
+    "adept_decision": {
+        "tag",
+        "reason",
+        "position",
+        "health",
+        "shield",
+        "own_cooldown",
+        "target_tag",
+    },
+}
+
+
+def validate_harass_event(kind, fields):
+    if kind.startswith(("hellion_", "adept_")):
+        if kind not in HARASS_EVENT_FIELDS or fields.keys() - HARASS_EVENT_FIELDS[kind]:
+            raise ValueError("Unknown harassment diagnostic event or field")
+
+
+def json_point(point):
+    return [float(value) for value in point]
+
 
 def line_overlap(origin, aim, positions, reach, width=0.75):
     """Approximate alignment score, not the engine's undisclosed splash geometry."""
@@ -65,8 +115,8 @@ class HellionHarass:
                 bot.record(
                     "hellion_route",
                     tag=int(unit.tag),
-                    target=list(self.routes[unit.tag]),
-                    query_distance=distance,
+                    target=json_point(self.routes[unit.tag]),
+                    query_distance=float(distance) if distance is not None else None,
                     scope="distance_not_collision_free_route",
                 )
             route = self.routes[unit.tag]
@@ -136,12 +186,14 @@ class HellionHarass:
                     "hellion_decision",
                     tag=int(unit.tag),
                     reason=reason,
-                    position=list(unit.position),
+                    position=json_point(unit.position),
                     health=float(unit.health),
                     own_cooldown=float(unit.weapon_cooldown),
                     target_tag=int(target.tag) if target else None,
-                    target_position=list(target.position) if target else None,
+                    target_position=json_point(target.position) if target else None,
                     estimated_line_overlap=int(overlap),
-                    worker_distance=min((unit.distance_to(w) for w in workers), default=None),
+                    worker_distance=float(min(unit.distance_to(w) for w in workers))
+                    if workers
+                    else None,
                 )
             self.last_reason[unit.tag] = reason

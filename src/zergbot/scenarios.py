@@ -20,7 +20,7 @@ from sc2.player import Bot
 from sc2.position import Point2
 
 from .config import BotConfig
-from .harass_micro import HellionHarass
+from .harass_micro import HellionHarass, validate_harass_event
 from .queens import QueenManager
 from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
 from .tank_micro import split_waypoint
@@ -97,6 +97,7 @@ class MeasuredBot(BotAI):
         return True
 
     def record(self, kind, **fields):
+        validate_harass_event(kind, fields)
         if len(self.events) < 3000:
             self.events.append(dict(frame=int(self.state.game_loop), kind=kind, **fields))
 

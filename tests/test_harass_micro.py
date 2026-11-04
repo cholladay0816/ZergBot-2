@@ -77,3 +77,26 @@ def test_critical_hellion_retreats_without_issuing_an_attack():
     asyncio.run(HellionHarass().step(bot, [unit], workers, [], Point2((0, 0)), 1))
     unit.move.assert_called_once()
     unit.attack.assert_not_called()
+
+
+def test_real_scenario_event_contract_handles_numeric_boundaries(json_roundtrip):
+    import asyncio
+    from types import MethodType
+
+    import numpy as np
+    import pytest
+
+    from zergbot.harass_micro import HellionHarass
+    from zergbot.scenarios import MeasuredBot
+
+    bot, unit, workers = hellion_fixture()
+    bot.events = []
+    bot.record = MethodType(MeasuredBot.record, bot)
+    bot.client.query_pathing.return_value = np.float32(12)
+    unit.tag = np.int64(1)
+    unit.position = Point2((np.float32(0), np.float32(0)))
+    asyncio.run(HellionHarass().step(bot, [unit], workers, [], Point2((0, 0)), 1))
+    events = json_roundtrip(bot.events)
+    assert {e["kind"] for e in events} == {"hellion_route", "hellion_decision"}
+    with pytest.raises(ValueError):
+        bot.record("hellion_decision", password="not-allowed")

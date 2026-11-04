@@ -208,8 +208,7 @@ def test_startup_failure_survives_library_defeat_conversion_without_error_text(t
     assert "SECRET_TOKEN" not in json.dumps(payload)
 
 
-def test_construction_and_production_events_distinguish_completion(tmp_path):
-    import json
+def test_construction_and_production_events_distinguish_completion(tmp_path, json_roundtrip):
 
     from zergbot.diagnostics import MatchDiagnostics
     from zergbot.economy import Economy
@@ -226,7 +225,7 @@ def test_construction_and_production_events_distinguish_completion(tmp_path):
     Economy.production_event(bot, U.QUEEN, 1)
     bot.state.game_loop = 1120
     asyncio.run(ZergBot.on_unit_created(bot, SimpleNamespace(tag=8, type_id=U.QUEEN)))
-    events = json.loads(json.dumps(recorder.payload()))["events"]
+    events = json_roundtrip(recorder.payload())["events"]
     assert [e["kind"] for e in events] == [
         "construction_started",
         "construction_completed",
