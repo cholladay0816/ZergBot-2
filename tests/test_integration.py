@@ -1,0 +1,81 @@
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
+
+from sc2.ids.ability_id import AbilityId as A
+from sc2.ids.unit_typeid import UnitTypeId as U
+from sc2.ids.upgrade_id import UpgradeId
+from sc2.position import Point2
+
+from zergbot.agents import Action, CommandArbiter, Intent
+from zergbot.bot import ZergBot
+from zergbot.integration import ROACH_TYPES, SC2UnitGateway
+
+
+def unit(tag, burrowed=False, health_max=100):
+    result = Mock()
+    result.tag = tag
+    result.health = 40
+    result.health_max = health_max
+    result.is_burrowed = burrowed
+    return result
+
+
+def test_batched_query_maps_abilities_per_unit_and_checks_research():
+    units = [unit(1), unit(2, True), unit(3, health_max=0)]
+    bot = SimpleNamespace(
+        units=Mock(),
+        state=SimpleNamespace(upgrades=set()),
+        get_available_abilities=AsyncMock(
+            return_value=[[A.BURROWDOWN_ROACH], [A.BURROWUP_ROACH], []]
+        ),
+    )
+    bot.units.of_type.return_value = units
+    gateway = SC2UnitGateway(bot)
+    observations = asyncio.run(gateway.observe())
+    bot.get_available_abilities.assert_awaited_once_with(units)
+    bot.units.of_type.assert_called_once_with({U.ROACH, U.ROACHBURROWED})
+    assert observations[0].can_burrow and not observations[0].can_emerge
+    assert observations[1].can_emerge and not observations[1].can_burrow
+    assert observations[1].burrowed
+    assert observations[2].health == 0
+    assert not observations[0].burrow_researched
+    bot.state.upgrades.add(UpgradeId.BURROW)
+    assert asyncio.run(gateway.observe())[0].burrow_researched
+
+
+def test_no_units_skips_network_and_removes_stale_lookup():
+    bot = SimpleNamespace(units=Mock(), get_available_abilities=AsyncMock())
+    bot.units.of_type.return_value = []
+    gateway = SC2UnitGateway(bot)
+    gateway.units = {99: unit(99)}
+    assert asyncio.run(gateway.observe()) == []
+    assert gateway.units == {}
+    bot.get_available_abilities.assert_not_awaited()
+
+
+def test_dispatch_exactly_one_winning_command_and_wait_is_noop():
+    gateway = SC2UnitGateway(Mock())
+    gateway.units = {i: unit(i, burrowed=i in (2, 3, 6)) for i in range(1, 7)}
+    arbiter = CommandArbiter()
+    for tag, action in enumerate(
+        [Action.BURROW, Action.EMERGE, Action.WAIT, Action.ATTACK, Action.RETREAT, Action.ATTACK], 1
+    ):
+        arbiter.submit(Intent(tag, action, 100))
+        arbiter.submit(Intent(tag, Action.ATTACK, 10))
+    arbiter.submit(Intent(999, Action.ATTACK, 10))  # stale tag is harmless
+    target, retreat = Point2((10, 10)), Point2((0, 0))
+    gateway.dispatch(arbiter, target, retreat)
+    gateway.units[1].assert_called_once_with(A.BURROWDOWN_ROACH)
+    gateway.units[2].assert_called_once_with(A.BURROWUP_ROACH)
+    assert gateway.units[3].mock_calls == []
+    gateway.units[4].attack.assert_called_once_with(target)
+    gateway.units[5].move.assert_called_once_with(retreat)
+    assert gateway.units[6].mock_calls == []
+
+
+def test_bot_instances_have_independent_agent_state():
+    first, second = ZergBot(), ZergBot()
+    assert first.registry is not second.registry
+    assert first.gateway.bot is first
+    assert ROACH_TYPES == {U.ROACH, U.ROACHBURROWED}
