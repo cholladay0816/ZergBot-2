@@ -54,7 +54,7 @@ class RoachTech:
             bot.workers.amount,
             macro.ready_bases,
             roaches,
-            macro.threatened,
+            macro.threatened and not (getattr(bot, "adaptive", None) and bot.adaptive.air.target()),
             bool(lairs) or bool(bot.already_pending(U.LAIR)),
             bool(lairs.ready),
             bool(evos) or bool(bot.already_pending(U.EVOLUTIONCHAMBER)),

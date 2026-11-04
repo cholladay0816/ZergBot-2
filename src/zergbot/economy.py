@@ -98,9 +98,12 @@ class Economy:
             )
             for b in bot.townhalls.ready
         )
+        defense_goal = self.config.attack_roaches
+        if self.config.adaptive_army and bot.adaptive.air.target() > 0:
+            defense_goal = self.config.defensive_roaches
         if ground_pressure and bot.structures(U.ROACHWARREN).ready:
             defending_roaches = bot.units.of_type({U.ROACH, U.ROACHBURROWED}).amount
-            if defending_roaches + bot.already_pending(U.ROACH) < self.config.attack_roaches:
+            if defending_roaches + bot.already_pending(U.ROACH) < defense_goal:
                 if bot.train(U.ROACH):
                     return
         if not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL):

@@ -185,3 +185,47 @@ def test_adaptive_live_numpy_counts_are_serializable(tmp_path):
     AdaptiveArmy(C).event(bot, "ling_pressure", "scout_or_disengage", visible_workers=count)
     recorder.finish(termination="test")
     assert json.loads((tmp_path / "match.json").read_text())["events"][0]["visible_workers"] == 2
+
+
+def test_observed_immortals_trigger_light_counter_without_inventing_unseen_units():
+    memory = AirMemory()
+    units = [
+        SimpleNamespace(
+            tag=i,
+            is_visible=True,
+            is_flying=False,
+            can_attack_ground=True,
+            can_attack_air=False,
+            type_id=U.IMMORTAL,
+        )
+        for i in (1, 2)
+    ]
+    memory.observe(units[:1], 0)
+    assert memory.target() == 0
+    memory.observe(units, 4)
+    assert memory.target() == 6
+    memory.observe([], 1350)
+    assert memory.target() == 0
+
+
+def test_hydra_reservation_prevents_cheaper_roach_spending_starvation():
+    bot = bot_stub()
+    bot.time = 400
+    bot.units.return_value = Group()
+    bot.structures.of_type.return_value = Group([object()])
+    bot.train.return_value = 0
+    army = AdaptiveArmy(C)
+    army.air.seen = {1: 0}
+    assert asyncio.run(army.produce(bot, None, SimpleNamespace(threatened=True)))
+    bot.train.assert_called_once_with(U.HYDRALISK)
+    bot.vespene = 0
+    assert not asyncio.run(army.produce(bot, None, SimpleNamespace(threatened=True)))
+
+
+def test_confirmed_destruction_prunes_counter_memory():
+    memory = AirMemory()
+    memory.seen = {1: 0}
+    memory.immortals = {2: 0, 3: 0}
+    memory.destroyed(1)
+    memory.destroyed(2)
+    assert memory.target() == 0

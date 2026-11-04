@@ -139,6 +139,8 @@ class QueenManager:
                 motion = None
                 if self.config.queen_tactical_micro:
                     attack_range = queen.air_range if enemy.is_flying else queen.ground_range
+                    nearby_workers = bot.workers.closer_than(12, base)
+                    protected = nearby_workers.center if nearby_workers else base.position
                     motion = defend_motion(
                         queen.position,
                         base.position,
@@ -147,6 +149,7 @@ class QueenManager:
                         attack_range,
                         queen.radius + enemy.radius,
                         bot.in_pathing_grid,
+                        protected=protected,
                     )
                 if motion is not None:
                     target, action = motion, "kite"

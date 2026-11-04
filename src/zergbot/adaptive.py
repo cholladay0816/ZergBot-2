@@ -23,6 +23,7 @@ def pressure_allowed(*, full_local_vision, workers, armed, healthy_lings, home_s
 class AirMemory:
     def __init__(self):
         self.seen = {}
+        self.immortals = {}
 
     def observe(self, enemies, frame):
         for enemy in enemies:
@@ -35,9 +36,19 @@ class AirMemory:
             ):
                 self.seen[enemy.tag] = frame
         self.seen = {tag: time for tag, time in self.seen.items() if frame - time <= 1344}
+        for enemy in enemies:
+            if enemy.is_visible and enemy.type_id == U.IMMORTAL:
+                self.immortals[enemy.tag] = frame
+        self.immortals = {tag: time for tag, time in self.immortals.items() if frame - time <= 1344}
+
+    def destroyed(self, tag):
+        self.seen.pop(tag, None)
+        self.immortals.pop(tag, None)
 
     def target(self):
-        return min(20, max(4, 2 * len(self.seen))) if self.seen else 0
+        air = min(20, max(4, 2 * len(self.seen))) if self.seen else 0
+        ground = min(12, 3 * len(self.immortals)) if len(self.immortals) >= 2 else 0
+        return max(air, ground)
 
 
 class AdaptiveArmy:
@@ -98,9 +109,9 @@ class AdaptiveArmy:
         self.event(
             bot,
             "anti_air",
-            "recent_visible_air",
+            "recent_visible_air_or_immortals",
             target_count=target,
-            observed_count=len(self.air.seen),
+            observed_count=len(self.air.seen) + len(self.air.immortals),
         )
         if not bot.structures.of_type({U.LAIR, U.HIVE}).ready:
             return False
@@ -120,7 +131,12 @@ class AdaptiveArmy:
                 and screen >= self.config.defensive_roaches
             )
         if den.ready and bot.units(U.HYDRALISK).amount + bot.already_pending(U.HYDRALISK) < target:
-            return bool(bot.train(U.HYDRALISK))
+            if bot.train(U.HYDRALISK):
+                self.event(bot, "hydra_production", "submitted", target_count=target)
+                return True
+            cost = bot.calculate_cost(U.HYDRALISK)
+            # Otherwise continuous cheaper roaches can starve the actual counter.
+            return bot.vespene >= cost.vespene
         return False
 
     def control(self, bot, target, retreat):

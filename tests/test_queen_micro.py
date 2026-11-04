@@ -29,3 +29,12 @@ def test_chase_leash_returns_to_base_and_never_requires_enemy_cooldown():
     assert defend_motion(
         Point2((14, 0)), Point2((0, 0)), Point2((20, 0)), 0, 5, 1, lambda p: True
     ) == Point2((0, 0))
+
+
+def test_worker_interception_does_not_back_away_from_side_mineral_line():
+    position, base, enemy = Point2((4, 0)), Point2((0, 0)), Point2((8, 0))
+    protected = Point2((4, 6))
+    motion = defend_motion(position, base, enemy, 10, 5, 1, lambda p: True, protected)
+    assert motion is not None and motion.y > 0
+    # A ready in-range shot is never replaced by a cooldown reposition command.
+    assert defend_motion(position, base, enemy, 0, 5, 1, lambda p: True, protected) is None

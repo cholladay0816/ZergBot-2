@@ -29,11 +29,26 @@ def grenade_escape(position, unit_radius, effects, pathable):
     return max(valid, key=lambda p: min(p.distance_to(c) for c in charges)) if valid else None
 
 
-def defend_motion(position, base, enemy_position, cooldown, attack_range, radii, pathable):
+def defend_motion(
+    position, base, enemy_position, cooldown, attack_range, radii, pathable, protected=None
+):
     distance = position.distance_to(enemy_position)
     # Keep the queen in a protective base envelope; do not chase a faster Reaper away.
     if position.distance_to(base) > 12 and enemy_position.distance_to(base) > 15:
         return base
+    if protected is not None and cooldown > 0:
+        # Occupy the approach to the worker pocket between shots, instead of
+        # conceding it by blindly backing away from a faster attacker.
+        intercept = (
+            protected.towards(enemy_position, 3)
+            if protected.distance_to(enemy_position) > 0.01
+            else protected
+        )
+        if position.distance_to(intercept) > 1:
+            step = position.towards(intercept, min(1.5, position.distance_to(intercept)))
+            if step.distance_to(base) <= 12 and pathable(step):
+                return step
+        return None
     if cooldown > 0 and distance <= attack_range + radii + 1:
         point = (
             position.towards(enemy_position, -1.5)

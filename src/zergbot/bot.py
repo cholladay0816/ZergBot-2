@@ -166,6 +166,7 @@ class ZergBot(BotAI):
 
     async def on_unit_destroyed(self, unit_tag):
         self.scouting.destroyed(unit_tag)
+        self.adaptive.air.destroyed(unit_tag)
         if self.telemetry:
             self.telemetry.destroyed(self.state.game_loop, unit_tag)
 
