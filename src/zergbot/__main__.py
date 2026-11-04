@@ -104,6 +104,9 @@ def main() -> None:
     parser.add_argument(
         "--queen-recovery", action=argparse.BooleanOptionalAction, default=defaults.queen_recovery
     )
+    parser.add_argument(
+        "--hatch-first", action=argparse.BooleanOptionalAction, default=defaults.hatch_first
+    )
     args = parser.parse_args()
     if not 0 <= args.seed < 2**32:
         parser.error("Seed must be in [0, 2**32)")
@@ -135,6 +138,7 @@ def main() -> None:
             burrow_escape_frames=args.burrow_escape_frames,
             roach_tech=args.roach_tech,
             opening_supply=args.opening_supply,
+            hatch_first=args.hatch_first,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
             queen_recovery=args.queen_recovery,

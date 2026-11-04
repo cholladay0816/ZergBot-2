@@ -14,6 +14,7 @@ class BotConfig:
     adaptive_army: bool = False
     roach_tech: bool = False
     opening_supply: bool = False
+    hatch_first: bool = False
     tech_min_workers: int = 32
     workers: int = 66
     defensive_roaches: int = 6

@@ -6,6 +6,7 @@ from sc2.ids.upgrade_id import UpgradeId
 
 from .config import BotConfig
 from .macro import MacroHatchGate, MacroState, extractor_target, queen_target, worker_target
+from .opening import HatchFirstOpening
 from .tech import RoachTech
 
 
@@ -31,6 +32,8 @@ class Economy:
         self.macro_gate = MacroHatchGate()
         self.next_macro_frame = 0
         self.tech = RoachTech(config)
+        self.opening = HatchFirstOpening()
+        self.opening_status = None
 
     async def step(self, bot: BotAI, iteration: int, abilities_by_tag=None) -> None:
         if iteration % 8 == 0 and not (
@@ -111,6 +114,35 @@ class Economy:
             if defending_roaches + bot.already_pending(U.ROACH) < defense_goal:
                 if bot.train(U.ROACH):
                     return
+        if self.config.hatch_first:
+            opening_threat = ground_pressure or any(
+                bot.enemy_structures.filter(
+                    lambda u: u.can_attack_ground or u.type_id in {U.PYLON, U.PHOTONCANNON}
+                ).closer_than(25, b)
+                for b in bot.townhalls.ready
+            )
+            reserve_natural = self.opening.reserve(
+                frame=bot.state.game_loop,
+                workers=bot.workers.amount,
+                bases=len(resource_bases),
+                threatened=bool(opening_threat),
+            )
+            status = (
+                "opening_reserve"
+                if reserve_natural
+                else "opening_aborted"
+                if self.opening.aborted
+                else "opening_complete"
+                if self.opening.done
+                else "opening_drone_growth"
+            )
+            if status != self.opening_status:
+                self.expansion_event(bot, status, None)
+                self.opening_status = status
+            if reserve_natural:
+                if bot.can_afford(U.HATCHERY):
+                    await self.try_expand(bot)
+                return
         if not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL):
             if bot.workers.amount >= 16 and bot.can_afford(U.SPAWNINGPOOL):
                 await bot.build(
