@@ -120,6 +120,8 @@ class MatchDiagnostics:
         self.events = deque(maxlen=self.config.max_events)
         self.snapshots = deque(maxlen=self.config.max_snapshots)
         self.morph_confirmations = Counter()
+        self.decision_changes = Counter()
+        self.destruction_observations = Counter()
         self.totals = Counter()
         self.command_counts = Counter()
         self.dropped = 0
@@ -149,6 +151,13 @@ class MatchDiagnostics:
             raise ValueError("Unknown diagnostic event or field")
         self.max_frame = max(self.max_frame, frame)
         self.totals[kind] += 1
+        if kind == "decision":
+            self.count_bounded(self.decision_changes, f"{data.get('action')}:{data.get('reason')}")
+        if kind == "destroyed":
+            self.count_bounded(
+                self.destruction_observations,
+                f"{data.get('scope')}:{data.get('unit_type') or 'unknown'}",
+            )
         if kind == "type_changed":
             if data.get("unit_type") == "ROACHBURROWED" and data.get("previous_type") == "ROACH":
                 self.morph_confirmations["BURROW"] += 1
@@ -174,6 +183,13 @@ class MatchDiagnostics:
             }
         )
 
+    @staticmethod
+    def count_bounded(counter, key):
+        # Enum-derived labels normally stay far below this hard cardinality bound.
+        if key not in counter and len(counter) >= 127:
+            key = "other"
+        counter[key] += 1
+
     def payload(self):
         wall = max(0.0, self.clock() - self.started)
         return {
@@ -190,6 +206,8 @@ class MatchDiagnostics:
             "totals": dict(self.totals),
             "command_attempt_counts": dict(self.command_counts),
             "morph_confirmations": dict(self.morph_confirmations),
+            "decision_change_counts": dict(self.decision_changes),
+            "destruction_observation_counts": dict(self.destruction_observations),
             "dropped_events": self.dropped,
             "snapshot_calls": self.snapshot_calls,
             "instrumentation_seconds": self.overhead_seconds,
@@ -328,7 +346,8 @@ def write_artifacts(directory, payload):
         f"Replay: {payload['replay'] or 'not available'}.",
         "",
         "Own state is known; enemy detail is limited to current visibility. Enemy orders, "
-        "weapon cooldowns and engaged targets are unknown. No full replay/observer pass was run.",
+        "weapon cooldowns and engaged targets are unknown. This report uses live-bot evidence; "
+        "any separate post-game replay analysis is linked below.",
         "Damage events are observed HP/shield deltas, including possible self/environment damage; "
         "fatal-frame damage can be absent. Candidate attackers and effects are correlations, "
         "not proven casters or causes. Base weapon ranges exclude upgrades. Terrain-height "
@@ -386,6 +405,9 @@ def write_artifacts(directory, payload):
         f"Own destruction-event types: {dict(losses)}. These may include worker "
         "consumption for construction, not just combat kills.",
     ]
+    from .combat_report import combat_lines
+
+    lines += combat_lines(payload)
     for event in payload["events"]:
         if event["kind"] == "action_error":
             lines.append(

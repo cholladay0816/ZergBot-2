@@ -249,3 +249,6 @@ still request full defense. Dead, recovering and distant defenders are replaced;
 per-unit recovery/morph vetoes retain priority. This does not yet defend every
 expansion or estimate unseen threats. Evaluate paired seeds against the retained
 supply policy, measuring outcomes and army-objective/defense switching.
+
+Combat reports group retained HP/shield-loss observations by game minute, with multiple/no-candidate counts and event references. Effect, buff and cloak counts are sampled appearances, not distinct casts or proven causes. Bounded lifetime decision-change and destruction-observation counters survive detail eviction. These counters are absent (unknown) in older artifacts.
+
