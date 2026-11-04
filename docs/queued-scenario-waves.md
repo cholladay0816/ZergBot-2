@@ -6,9 +6,9 @@ requested experiments, not completed validation or claims of optimal micro.
 | Wave | Status | Required evidence |
 |---|---|---|
 | Pool / first-queen budget | Fixed c816d95 probes complete; timing gain too small with worker regression, stays off | Pool construction start/completion, queen production submission/completion, workers, then a separately controlled opening-rush survival check |
-| Offensive ling diversion versus Hellions | Queued | Identical initial counts/upgrades/health/positions for grouped and split policies; actual flank traversal to observed workers; Hellions independently protect workers and select useful line-splash targets; worker damage/kills, ling losses, path progress, fallback |
-| Defensive Hellion mineral-line rush | Six 2a58ff6 pairs completed with meaningful attacks and mixed queen results; micro remains off | Real worker access under varied approaches, queen protection and worker spacing, worker survival/HP/mineral collection, actual attacker survival; no exact splash attribution from HP loss alone |
-| Adept shade harassment | Queued | Actual cast, owned shade movement, cancel/feint and expiry/commit trials; defender sees only normal visible shade/unit evidence; verified transfer, worker/queen outcomes and mining impact |
+| Offensive ling diversion versus Hellions | Six corrected cases completed; mixed/regressive, stays scenario-only | Identical initial counts/upgrades/health/positions for grouped and split policies; actual flank traversal to observed workers; Hellions independently protect workers and select useful line-splash targets; worker damage/kills, ling losses, path progress, fallback |
+| Defensive Hellion mineral-line rush | Six 2a58ff6 cases (three pairs) completed with meaningful attacks and mixed queen results; micro remains off | Real worker access under varied approaches, queen protection and worker spacing, worker survival/HP/mineral collection, actual attacker survival; no exact splash attribution from HP loss alone |
+| Adept shade harassment | Two mechanic pilots and twelve matched cases completed; guard stays scenario-only | Actual cast, owned shade movement, cancel/feint and expiry/commit trials; defender sees only normal visible shade/unit evidence; verified transfer, worker/queen outcomes and mining impact |
 
 The first queen's 169-second observation was completion. SpawningTool's
 [parser](https://github.com/StoicLoofah/spawningtool/blob/master/spawningtool/parser.py)
@@ -32,3 +32,5 @@ CANCEL_ADEPTSHADEPHASESHIFT; ADEPTPHASESHIFT is a unit type, not a fake effect. 
 commit occurs by shade expiry, not an invented commit ability. Enemy shade disappearance
 in fog does not prove cancellation or transfer. Attacker logs remain evaluator-only.
 Multiple-caster association is uncertain because the raw protocol supplies no parent tag.
+
+Completed Adept/diversion evidence: [harassment scenario ledger](harassment-scenarios-2026-11-04.md).
