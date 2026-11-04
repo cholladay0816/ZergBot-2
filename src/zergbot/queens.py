@@ -86,7 +86,7 @@ class QueenManager:
                 )
                 self.last_decisions[queen.tag] = decision
 
-    async def step(self, bot, abilities):
+    async def step(self, bot, abilities, *, reserved_tags=()):
         bases, queens = list(bot.townhalls.ready), list(bot.units(U.QUEEN).ready)
         self.assign(bases, queens)
         if not bases:
@@ -97,6 +97,8 @@ class QueenManager:
         frame = bot.state.game_loop
         creep_budget = frame >= self.next_creep_frame
         for queen in queens:
+            if queen.tag in reserved_tags:
+                continue
             base = roles.get(queen.tag) or min(bases, key=queen.distance_to)
             role = "inject" if queen.tag in roles else "defense_creep"
             available = abilities.get(queen.tag, set())

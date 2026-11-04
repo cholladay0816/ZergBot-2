@@ -114,6 +114,10 @@ def test_step_injects_once_and_reserves_injector_from_creep(tmp_path):
     queen.move.assert_not_called()
     bot.find_placement.assert_not_awaited()
     queen.reset_mock()
+    asyncio.run(manager.step(bot, {1: {A.EFFECT_INJECTLARVA}}, reserved_tags={1}))
+    queen.assert_not_called()
+    queen.attack.assert_not_called()
+    queen.move.assert_not_called()
     queen.orders = [object()]
     asyncio.run(manager.step(bot, {1: {A.EFFECT_INJECTLARVA}}))
     queen.assert_not_called()

@@ -5,6 +5,7 @@ import math
 from sc2.position import Point2
 
 HARASS_EVENT_FIELDS = {
+    "adept_guard": {"tag", "target_position", "moved", "scope"},
     "hellion_route": {"tag", "target", "query_distance", "scope"},
     "hellion_decision": {
         "tag",

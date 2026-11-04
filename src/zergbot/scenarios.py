@@ -24,6 +24,7 @@ from .config import BotConfig
 from .harass_micro import HellionHarass, validate_harass_event
 from .queens import QueenManager
 from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
+from .shade_guard import guard_queen
 from .tank_micro import split_waypoint
 from .worker_safety import worker_action
 
@@ -238,8 +239,17 @@ class Defender(MeasuredBot):
             self.tank_defense()
         queens = list(self.units(U.QUEEN))
         abilities = await self.get_available_abilities(queens) if queens else []
+        reserved = set()
+        if getattr(self.options, "shade_guard", False) and self.workers:
+            shades = list(self.enemy_units(U.ADEPTPHASESHIFT).visible)
+            threats = list(self.enemy_units.visible.filter(lambda u: u.can_attack_ground))
+            for queen in queens:
+                if guard_queen(self, queen, self.workers.center, shades, threats):
+                    reserved.add(queen.tag)
         await self.manager.step(
-            self, {q.tag: set(a) for q, a in zip(queens, abilities, strict=True)}
+            self,
+            {q.tag: set(a) for q, a in zip(queens, abilities, strict=True)},
+            reserved_tags=reserved,
         )
         for queen in queens:
             previous = self.previous_positions.get(queen.tag, queen.position)
@@ -668,6 +678,7 @@ def main():
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
+    parser.add_argument("--shade-guard", action="store_true")
     parser.add_argument("--worker-safety", action="store_true")
     parser.add_argument("--worker-defense-count", type=int, choices=range(1, 13), default=6)
     parser.add_argument("--worker-defense-seconds", type=int, default=10)
