@@ -9,6 +9,7 @@ from sc2.position import Point2
 
 from .adaptive import AdaptiveArmy
 from .agents import AgentRegistry, CommandArbiter
+from .base_defense import BaseDefense, Threat, defense_sample
 from .config import BotConfig
 from .economy import Economy
 from .integration import SC2UnitGateway
@@ -28,6 +29,7 @@ class ZergBot(BotAI):
         self.registry = AgentRegistry()
         self.gateway = SC2UnitGateway(self)
         self.strategy = ArmyStrategy()
+        self.base_defense = BaseDefense()
         self.siege_spacing = SiegeSpacing()
         self.search = ExpansionSearch()
         self.economy = Economy(self.config)
@@ -98,6 +100,32 @@ class ZergBot(BotAI):
             if self.enemy_structures
             else self.enemy_start_locations[0]
         )
+        if self.config.all_base_defense:
+            bases = {base.tag: tuple(base.position) for base in self.townhalls.ready}
+            visible_threats = [
+                Threat(
+                    u.tag,
+                    tuple(u.position),
+                    u.type_id in {UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.DRONE},
+                )
+                for u in self.enemy_units
+                if u.is_visible and not u.is_flying and u.can_attack_ground
+            ]
+            objective = self.base_defense.select(
+                bases, visible_threats, self.state.game_loop, self.config.worker_defenders
+            )
+            retreat = Point2(self.base_defense.retreat(bases, visible_threats, tuple(retreat)))
+            if self.telemetry and self.state.game_loop % 112 == 0:
+                self.telemetry.recorder.record(
+                    "defense_objective",
+                    self.state.game_loop,
+                    **defense_sample(objective, retreat, bases),
+                )
+            threats = bool(objective)
+            small_worker_incursion = bool(objective and objective.worker_only)
+            worker_target = objective.target if small_worker_incursion else None
+            if objective and not small_worker_incursion:
+                target = Point2(objective.target)
         for intent in self.strategy.orders(
             observations,
             bool(threats) and not small_worker_incursion,

@@ -74,6 +74,7 @@ EVENT_FIELDS = {
         "uncertainty",
         "scope",
     },
+    "defense_objective": {"base_tag", "target", "worker_only", "retreat", "ready_bases", "scope"},
     "search_waypoint": {"previous", "target", "route_index", "reason", "scope"},
     "expansion": {"reason", "location"},
     "snapshot": {

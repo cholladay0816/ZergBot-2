@@ -99,6 +99,11 @@ def main() -> None:
     parser.add_argument("--sample-frames", type=int, default=112)
     parser.add_argument("--max-events", type=int, default=10000)
     parser.add_argument(
+        "--all-base-defense",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.all_base_defense,
+    )
+    parser.add_argument(
         "--roach-siege-spacing",
         action=argparse.BooleanOptionalAction,
         default=defaults.roach_siege_spacing,
@@ -157,6 +162,7 @@ def main() -> None:
             opening_readiness=args.opening_readiness,
             third_base_reserve=args.third_base_reserve,
             roach_siege_spacing=args.roach_siege_spacing,
+            all_base_defense=args.all_base_defense,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
             queen_recovery=args.queen_recovery,

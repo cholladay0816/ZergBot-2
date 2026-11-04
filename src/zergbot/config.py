@@ -18,6 +18,7 @@ class BotConfig:
     opening_readiness: bool = False
     third_base_reserve: bool = False
     roach_siege_spacing: bool = False
+    all_base_defense: bool = False
     tech_min_workers: int = 32
     workers: int = 66
     defensive_roaches: int = 6
