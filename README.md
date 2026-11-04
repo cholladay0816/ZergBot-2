@@ -220,3 +220,12 @@ event bursts, and lifetime morph-confirmation counters survive detail eviction.
 Seed 1's midgame blocked-supply sample rate increased from 0% to 12.2%, and seed 3's
 from 0% to 20.4%. Earlier supply is therefore the next controlled hypothesis.
 These are capped exploratory runs, not demonstrated wins or isolated causal effects.
+
+
+Wave 2 hypothesis: the higher larva throughput made the old four-supply overlord
+trigger too late. The candidate reserves 8/12/16 projected free supply at one/two/
+three ready bases, accounts for pending overlords, and never queues redundant
+supply beyond the 200 cap. Only the supply policy changes in this wave. Compare
+seeds 1/2/3 against `dbdba87`, now with a 1,200-game-second/300-wall-second cap so
+the earlier ten-minute censored outcomes can develop. Primary metric is blocked-
+supply sample fraction from 120–360 seconds; also track army, minerals and outcomes.

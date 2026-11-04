@@ -9,6 +9,18 @@ from sc2.ids.upgrade_id import UpgradeId
 from .config import BotConfig
 
 
+def needs_overlord(supply_left, supply_cap, pending_overlords, ready_bases, config):
+    """Reserve lead time for faster larva throughput without duplicating pending supply."""
+    if supply_cap + 8 * pending_overlords >= 200:
+        return False
+    buffer = min(
+        config.supply_buffer_max,
+        max(config.supply_buffer_min, 4 + config.supply_buffer_per_base * ready_bases),
+    )
+    projected_left = supply_left + 8 * pending_overlords
+    return projected_left < buffer
+
+
 class Economy:
     def __init__(self, config: BotConfig) -> None:
         self.config = config
@@ -21,7 +33,13 @@ class Economy:
             return
         self.inject(bot, abilities_by_tag or {})
         home = bot.townhalls.ready.first
-        if bot.supply_left < 4 and bot.supply_cap < 200 and not bot.already_pending(U.OVERLORD):
+        if needs_overlord(
+            bot.supply_left,
+            bot.supply_cap,
+            bot.already_pending(U.OVERLORD),
+            bot.townhalls.ready.amount,
+            self.config,
+        ):
             bot.train(U.OVERLORD)
             return
         if not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL):

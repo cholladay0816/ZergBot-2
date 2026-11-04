@@ -193,3 +193,23 @@ def test_failed_expansion_does_not_starve_production():
     asyncio.run(Economy(BotConfig()).step(bot, 1))
     bot.train.assert_called_once_with(U.ROACH)
     bot.build.assert_not_awaited()
+
+
+def test_supply_lead_scales_with_bases_and_accounts_for_pending_overlords():
+    from zergbot.economy import needs_overlord
+
+    config = BotConfig()
+    assert needs_overlord(6, 30, 0, 1, config)
+    assert not needs_overlord(6, 30, 1, 1, config)
+    assert needs_overlord(2, 60, 1, 2, config)
+    assert not needs_overlord(2, 60, 2, 2, config)
+    assert not needs_overlord(16, 80, 0, 3, config)
+    assert not needs_overlord(0, 200, 0, 3, config)
+    assert not needs_overlord(0, 196, 1, 3, config)
+
+
+def test_supply_preempts_production_before_old_four_supply_boundary():
+    bot = economy_bot()
+    bot.supply_left = 6
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.OVERLORD)

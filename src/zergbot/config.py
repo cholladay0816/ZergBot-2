@@ -9,6 +9,9 @@ class BotConfig:
     morph_timeout_frames: int = 64
     workers: int = 44
     defensive_roaches: int = 6
+    supply_buffer_min: int = 8
+    supply_buffer_per_base: int = 4
+    supply_buffer_max: int = 16
     expansion_retry_frames: int = 224
     attack_roaches: int = 12
     max_bases: int = 3
@@ -23,6 +26,9 @@ class BotConfig:
                 self.morph_timeout_frames,
                 self.workers,
                 self.defensive_roaches,
+                self.supply_buffer_min,
+                self.supply_buffer_per_base,
+                self.supply_buffer_max,
                 self.expansion_retry_frames,
                 self.attack_roaches,
                 self.max_bases,
@@ -31,3 +37,5 @@ class BotConfig:
             < 1
         ):
             raise ValueError("Counts and frame intervals must be positive")
+        if self.supply_buffer_min > self.supply_buffer_max:
+            raise ValueError("Supply buffer minimum must not exceed maximum")
