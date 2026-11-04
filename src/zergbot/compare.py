@@ -68,6 +68,24 @@ def metrics(data):
         e["kind"] == "action_error" and e["ability_id"] == 1152 and e["result"] == 44
         for e in data["events"]
     )
+    destruction_counts = data.get("destruction_observation_counts")
+    result["destruction_count_scope"] = (
+        "lifetime_recorded" if destruction_counts is not None else "retained_events"
+    )
+    for unit_type in ("ROACH", "ROACHBURROWED"):
+        result[f"own_{unit_type.lower()}_destructions"] = (
+            destruction_counts.get(f"own:{unit_type}", 0)
+            if destruction_counts is not None
+            else sum(
+                e["kind"] == "destroyed"
+                and e.get("scope") == "own"
+                and e.get("unit_type") == unit_type
+                for e in data["events"]
+            )
+        )
+    result["burrow_damage_events_retained"] = sum(
+        e["kind"] == "damage" and e.get("victim", {}).get("burrowed", False) for e in data["events"]
+    )
     result["instrumentation_seconds"] = data.get("instrumentation_seconds")
     return result
 
@@ -161,6 +179,26 @@ def main():
                 f"{metric['roaches_360']} | {metric['minerals_360']} | "
                 f"{metric['inject_attempts']} | {metric['action_errors']} | "
                 f"{metric['invalid_hatchery_placements']} |"
+            )
+    lines += [
+        "",
+        "## Micro observations",
+        "",
+        "Destruction observations describe the last known roach type; do not infer an exact "
+        "attacker or cause. Retained-event counts may be incomplete. Morph totals can include "
+        "several cycles by the same unit.",
+        "",
+        "| Seed | Variant | Burrows | Emergences | Exposed / buried destruction | Count scope |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for pair in pairs:
+        for variant in ("baseline", "candidate"):
+            metric = pair[variant]
+            lines.append(
+                f"| {pair['seed']} | {variant} | {metric['burrow_observations']} | "
+                f"{metric['emerge_observations']} | {metric['own_roach_destructions']} / "
+                f"{metric['own_roachburrowed_destructions']} | "
+                f"{metric['destruction_count_scope']} |"
             )
     lines += [
         "",

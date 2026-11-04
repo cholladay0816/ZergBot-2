@@ -60,3 +60,16 @@ def test_software_failure_or_incomplete_match_is_not_a_performance_loss(terminat
     candidate.update(outcome="Defeat", termination=termination)
     with pytest.raises(ValueError, match="failed matches"):
         compare_pair(baseline, candidate)
+
+
+def test_destruction_metrics_distinguish_retained_from_lifetime_counts():
+    data = match()
+    data["events"].append({"kind": "destroyed", "scope": "own", "unit_type": "ROACHBURROWED"})
+    older = metrics(data)
+    assert older["own_roachburrowed_destructions"] == 1
+    assert older["destruction_count_scope"] == "retained_events"
+    data["destruction_observation_counts"] = {"own:ROACHBURROWED": 20, "own:ROACH": 3}
+    newer = metrics(data)
+    assert newer["own_roachburrowed_destructions"] == 20
+    assert newer["own_roach_destructions"] == 3
+    assert newer["destruction_count_scope"] == "lifetime_recorded"
