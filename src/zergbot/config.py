@@ -17,6 +17,7 @@ class BotConfig:
     attack_roaches: int = 12
     regroup_roaches: int = 6
     worker_defenders: int = 0
+    search_expansions: bool = False
     max_bases: int = 3
     game_step: int = 4
     random_seed: int = 1

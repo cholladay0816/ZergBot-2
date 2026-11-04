@@ -4,11 +4,13 @@ from dataclasses import asdict
 import numpy as np
 from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.position import Point2
 
 from .agents import AgentRegistry, CommandArbiter
 from .config import BotConfig
 from .economy import Economy
 from .integration import SC2UnitGateway
+from .search import ExpansionSearch
 from .strategy import ArmyStrategy
 from .telemetry import TelemetryAdapter
 
@@ -21,6 +23,7 @@ class ZergBot(BotAI):
         self.registry = AgentRegistry()
         self.gateway = SC2UnitGateway(self)
         self.strategy = ArmyStrategy()
+        self.search = ExpansionSearch()
         self.economy = Economy(self.config)
 
     async def on_start(self) -> None:
@@ -88,6 +91,36 @@ class ZergBot(BotAI):
             positions={tag: tuple(unit.position) for tag, unit in self.gateway.units.items()},
         ):
             arbiter.submit(intent)
+        if (
+            self.config.search_expansions
+            and self.strategy.attacking
+            and not threats
+            and not self.enemy_structures
+        ):
+            previous = self.search.target(
+                self.enemy_start_locations[0],
+                self.expansion_locations_list,
+                [tuple(base.position) for base in self.townhalls],
+            )
+            positions = [
+                tuple(self.gateway.units[obs.tag].position)
+                for obs in observations
+                if not obs.burrowed and obs.health >= self.config.emerge_health
+            ]
+            waypoint = self.search.observe(
+                positions, self.is_visible(Point2(previous)), self.state.game_loop
+            )
+            target = Point2(waypoint)
+            if waypoint != previous and self.telemetry:
+                self.telemetry.recorder.record(
+                    "search_waypoint",
+                    self.state.game_loop,
+                    previous=previous,
+                    target=waypoint,
+                    route_index=self.search.index,
+                    reason="visited_visible_map_site",
+                    scope="candidate_location_not_known_enemy",
+                )
         for obs in observations:
             intent = self.registry.agents[obs.tag].decide(obs, self.state.game_loop, self.config)
             if intent is not None:

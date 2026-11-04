@@ -39,6 +39,7 @@ class DiagnosticConfig:
 # Values are built from explicit numeric/enum game fields at the adapter boundary.
 # Unknown fields are rejected rather than accidentally logging object reprs or secrets.
 EVENT_FIELDS = {
+    "search_waypoint": {"previous", "target", "route_index", "reason", "scope"},
     "expansion": {"reason", "location"},
     "snapshot": {
         "own",

@@ -22,6 +22,12 @@ def main() -> None:
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
+        "--search-expansions",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.search_expansions,
+        help="Search visible-cleared map sites when known enemy structures are gone",
+    )
+    parser.add_argument(
         "--worker-defenders",
         type=int,
         default=defaults.worker_defenders,
@@ -54,6 +60,7 @@ def main() -> None:
     try:
         config = BotConfig(
             random_seed=args.seed,
+            search_expansions=args.search_expansions,
             worker_defenders=args.worker_defenders,
             regroup_roaches=args.regroup_roaches,
             burrow_escape_frames=args.burrow_escape_frames,
@@ -107,6 +114,7 @@ def main() -> None:
             ],
             realtime=args.realtime,
             random_seed=args.seed,
+            search_expansions=args.search_expansions,
             game_time_limit=args.game_time_limit,
             save_replay_as=str(directory / "match.SC2Replay") if not args.no_diagnostics else None,
         )

@@ -307,3 +307,13 @@ next active candidate, not yet a retained performance claim.
 
 Wave 3 six-seed decision: do not promote the worker-defense squad. The baseline produced 2 wins, 1 loss and 3 capped games; the candidate produced 3 wins and 3 losses. It gained seed 2 but lost seeds 3/5 before the cap, and was slower in seed 4. Capped games are unresolved outcomes, so these data do not establish a better win rate. The squad defaults to zero; its opt-in implementation remains available for later investigation.
 
+
+
+Endgame search candidate: the hysteresis seed-3 run ended capped with 72 roaches
+repeatedly attacking the cleared enemy starting location. `--search-expansions`
+opts into a deterministic sweep of known map expansion sites when the army is on
+offense, there are no local defense threats and no known enemy structures. A site
+advances only when actually visible and a healthy exposed roach is nearby, with a
+112-frame dwell guard. These are candidate locations, not unseen enemy intelligence;
+known structures and survival orders retain priority. The experiment stays off by
+default until live evaluation and cannot solve unreachable flying buildings.
