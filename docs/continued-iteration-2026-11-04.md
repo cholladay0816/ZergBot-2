@@ -199,3 +199,63 @@ Full per-run evidence/hashes: `.local-matches/phase4-reaper-ingress-comparisons.
 - `scenario-20261104T205745Z-reaper-baseline2`: Reaper movement during own cooldown observed 66 times; worker-targeted grenade attempts 1.
 - `scenario-20261104T205815Z-reaper-micro2`: Reaper movement during own cooldown observed 67 times; worker-targeted grenade attempts 3.
 - `scenario-20261104T205843Z-reaper-micro2`: Reaper movement during own cooldown observed 87 times; worker-targeted grenade attempts 1.
+
+
+## Bounded hatch-first opening
+
+Frozen candidate `a8e182828b5bf28f12c593963022408bad3f4357` combines the refined
+opening supply buffer with a natural-expansion reservation at 16 workers. The hold is
+bounded to 30 game seconds and aborts on observed nearby ground pressure or Cannon/Pylon
+threats. Placement remains validated by the game API. This is an adapted opening step,
+not a literal implementation of a coach's full build. Both options remain off by default.
+
+Three 360-game-second Harder probes, seed 1, compare with the refined supply-only probes:
+
+| Opponent | Supply-only workers at 4 / 6 minutes | Hatch-first workers at 4 / 6 minutes |
+|---|---:|---:|
+| Terran | 26 / 44 | 32 / 47 |
+| Protoss | 29 / 53 | 37 / 59 |
+| Zerg | 26 / 44 | 31 / 54 |
+
+All six-minute probes are unresolved caps, not wins. In the Terran hatch-first probe,
+the natural command was submitted at 47.321 seconds; the foundation was observed at
+56.429 seconds. Pool presence was first sampled at 90 seconds and the first queen
+completed at 169.286 seconds. Start, sampled presence and completion are different metrics.
+Opening execution still has substantial room for improvement.
+
+Longer matched seed-1 comparisons use Harder, Abyssal Reef, step 4, 1200-game-second /
+300-wall-second bounds, adaptive-army and roach-tech enabled on both sides. Prior control
+is `02eb55f`; candidate adds opening-supply and hatch-first:
+
+| Opponent | Prior control result / game seconds | Candidate result / game seconds |
+|---|---|---|
+| Terran | Defeat / 826.429 | Defeat / 887.500 |
+| Protoss | Defeat / 978.393 | Victory / 612.143 |
+| Zerg | Victory / 771.250 | Victory / 544.286 |
+
+This is encouraging single-seed evidence, not a reliable win-rate estimate. A second-seed
+paired comparison is required before considering promotion. Terran still loses: 117 own
+burrowed-roach destruction events versus 20 observed emerge confirmations suggest that
+recovery is often failing, with visible Missile Turrets and ground attackers in the match.
+These are observations, not proof of each damage source or exact detection coverage at
+every death. The previously mixed detection-escape policy remains off.
+
+Raw evidence and hashes are indexed locally in
+`.local-matches/phase4-hatch-first-evidence.json`:
+- `20261104T205932Z-cee3d30e`: Terran, limit 360, Tie at 360.0; SHA-256 `2ebc2a764d542a70d6eaaeb57d506fe2bf6d81202d89459f2c7e098f486b300e`.
+- `20261104T210026Z-49009f24`: Protoss, limit 360, Tie at 360.0; SHA-256 `ea637dada2985fea829e3daf2826aac86b4b8dbb988c965c297087c94c4d6e0a`.
+- `20261104T210121Z-017498d0`: Zerg, limit 360, Tie at 360.0; SHA-256 `c2a61935a75d3f46e02221f783558539d2237795c9fd6bea9f652e13a9b01316`.
+- `20261104T210636Z-b92a913f`: Terran, limit 1200, Defeat at 887.5; SHA-256 `5de475af84b26fb40844444833b43623ae8f77ca8a7e134943f97e8f6057b133`.
+- `20261104T210948Z-cccfbb36`: Protoss, limit 1200, Victory at 612.143; SHA-256 `e435ede6d47ff764508ad18edc49987c0a0442f6088da8ea38b40fef1377f1af`.
+- `20261104T211157Z-2eb2478d`: Zerg, limit 1200, Victory at 544.286; SHA-256 `d9471d10f21e9d6065db91ba3d1cce4e24a07d9914f1dcf0fe3485484c4aedf0`.
+
+### Scenario cleanup ordering follow-up
+
+Checkpoint `2341fd5` adds a cleanup barrier before actor spawning, followed by the existing
+setup-ready barrier. Installed BurnySC2 obtains each player's initial observation before
+its on_start, but the two startup coroutines execute concurrently. Therefore the earlier
+single barrier did not itself prove that attacker worker cleanup preceded spawning the
+scenario Probe. The new two-phase protocol enforces that ordering; its regression test
+delays cleanup and verifies no spawn or gameplay can pass prematurely. This addresses a
+possible race without claiming it occurred in older artifacts. 201 offline tests pass.
+Live validation of this exact setup revision is pending separately from the match wave.
