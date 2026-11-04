@@ -53,3 +53,49 @@ def test_extended_window_is_explicit_and_still_bounded():
     assert worker_action(0.3, 2, True, 671, max_frames=672) == "evacuate"
     assert worker_action(0.8, 2, True, 672, max_frames=672) == "mine"
     assert worker_action(0.8, 6, True, 224, max_frames=672) == "mine"
+
+
+def test_expired_defense_releases_once_even_while_threat_remains():
+    from types import SimpleNamespace
+
+    from zergbot.scenarios import Defender
+
+    class Threats:
+        def filter(self, predicate):
+            return self
+
+        def closer_than(self, distance, position):
+            return self
+
+        def closest_to(self, worker):
+            return object()
+
+    class Minerals:
+        def closer_than(self, distance, position):
+            return self
+
+        def closest_to(self, worker):
+            return "mineral"
+
+    from collections import Counter
+
+    orders = []
+    worker = SimpleNamespace(
+        tag=7, health_percentage=1, distance_to=lambda _: 2, gather=orders.append
+    )
+    bot = SimpleNamespace(
+        enemy_units=Threats(),
+        mineral_field=Minerals(),
+        start_location=None,
+        workers=[worker],
+        worker_defenders={7},
+        worker_defense_start=0,
+        state=SimpleNamespace(game_loop=1000),
+        options=SimpleNamespace(worker_defense_seconds=10),
+        counts=Counter(),
+    )
+    assert Defender.protect_workers(bot) == {7}
+    assert bot.worker_defenders == set()
+    assert Defender.protect_workers(bot) == set()
+    assert orders == ["mineral"]
+    assert bot.counts["worker_mine_commands"] == 1

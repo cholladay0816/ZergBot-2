@@ -336,6 +336,7 @@ class Defender(MeasuredBot):
             )[:6]
         }
         handled = set()
+        active = set()
         for worker in self.workers:
             threat = threats.closest_to(worker)
             action = worker_action(
@@ -356,8 +357,12 @@ class Defender(MeasuredBot):
             else:
                 continue
             handled.add(worker.tag)
+            if action != "mine":
+                active.add(worker.tag)
             self.counts["worker_" + action + "_commands"] += 1
-        self.worker_defenders = handled
+        # A released worker is handled this frame only. Retaining it would send
+        # gather every subsequent frame and can interrupt normal cargo returns.
+        self.worker_defenders = active
         return handled
 
     def tank_defense(self):
