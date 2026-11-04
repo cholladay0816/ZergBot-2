@@ -8,3 +8,21 @@ def test_sampling_survives_offset_frames_and_remains_bounded():
     assert bot.sample_due("construction", 33, 112)
     assert not bot.sample_due("construction", 100, 112)
     assert bot.sample_due("construction", 149, 112)
+
+
+def test_worker_order_serialization_uses_actual_ability_enum():
+    import json
+    from types import SimpleNamespace
+
+    from sc2.ids.ability_id import AbilityId
+    from sc2.position import Point2
+
+    from zergbot.scenarios import observed_order
+
+    order = SimpleNamespace(ability=SimpleNamespace(id=AbilityId.HARVEST_GATHER), target=42)
+    assert json.loads(json.dumps(observed_order(order))) == {
+        "ability": AbilityId.HARVEST_GATHER.value,
+        "target": 42,
+    }
+    order.target = Point2((1, 2))
+    assert observed_order(order)["target"] is None

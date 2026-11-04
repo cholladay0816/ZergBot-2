@@ -22,6 +22,13 @@ from .tank_micro import split_waypoint
 from .worker_safety import worker_action
 
 
+def observed_order(order):
+    return dict(
+        ability=int(order.ability.id.value),
+        target=int(order.target) if isinstance(order.target, int) else None,
+    )
+
+
 def approach_point(base, center, approach):
     point = base.towards(center, 16)
     return point + Point2((0, (approach - 1) * 6))
@@ -233,13 +240,7 @@ class Defender(MeasuredBot):
                         own_cooldown=float(w.weapon_cooldown),
                         gathering=bool(w.is_gathering),
                         returning=bool(w.is_returning),
-                        orders=[
-                            dict(
-                                ability=int(o.ability.id),
-                                target=int(o.target) if isinstance(o.target, int) else None,
-                            )
-                            for o in w.orders
-                        ],
+                        orders=[observed_order(o) for o in w.orders],
                     )
                     for w in self.workers
                 ],
