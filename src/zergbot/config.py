@@ -16,6 +16,7 @@ class BotConfig:
     attack_roaches: int = 12
     max_bases: int = 3
     game_step: int = 4
+    random_seed: int = 1
 
     def __post_init__(self) -> None:
         if not 0 < self.burrow_health < self.emerge_health <= 1:
@@ -37,5 +38,7 @@ class BotConfig:
             < 1
         ):
             raise ValueError("Counts and frame intervals must be positive")
+        if not 0 <= self.random_seed < 2**32:
+            raise ValueError("Seed must be a uint32")
         if self.supply_buffer_min > self.supply_buffer_max:
             raise ValueError("Supply buffer minimum must not exceed maximum")

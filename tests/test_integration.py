@@ -156,3 +156,22 @@ def test_queens_share_single_batched_ability_query():
     bot.get_available_abilities.assert_awaited_once_with([roach, queen])
     assert len(observations) == 1
     assert gateway.abilities_by_tag[2] == {A.EFFECT_INJECTLARVA}
+
+
+def test_gameplay_seed_is_set_after_startup_and_is_reproducible():
+    import random
+
+    import numpy as np
+
+    from zergbot.config import BotConfig
+
+    saved_random, saved_numpy = random.getstate(), np.random.get_state()
+    try:
+        bot = ZergBot(BotConfig(random_seed=42))
+        bot.client = Mock()
+        asyncio.run(bot.on_start())
+        assert random.random() == random.Random(42).random()
+        assert np.random.random() == np.random.RandomState(42).random_sample()
+    finally:
+        random.setstate(saved_random)
+        np.random.set_state(saved_numpy)

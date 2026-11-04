@@ -26,6 +26,8 @@ def main() -> None:
     parser.add_argument("--sample-frames", type=int, default=112)
     parser.add_argument("--max-events", type=int, default=10000)
     args = parser.parse_args()
+    if not 0 <= args.seed < 2**32:
+        parser.error("Seed must be in [0, 2**32)")
     if args.game_time_limit is not None and args.game_time_limit <= 0:
         parser.error("Game time limit must be positive")
     from sc2 import maps
@@ -34,6 +36,7 @@ def main() -> None:
     from sc2.player import Bot, Computer
 
     from .bot import ZergBot
+    from .config import BotConfig
     from .diagnostics import DiagnosticConfig, MatchDiagnostics
 
     directory = args.diagnostics_dir / (
@@ -67,7 +70,10 @@ def main() -> None:
         result = run_game(
             maps.get(args.map),
             [
-                Bot(Race.Zerg, ZergBot(diagnostics=recorder)),
+                Bot(
+                    Race.Zerg,
+                    ZergBot(config=BotConfig(random_seed=args.seed), diagnostics=recorder),
+                ),
                 Computer(Race.Terran, Difficulty[args.difficulty]),
             ],
             realtime=args.realtime,

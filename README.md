@@ -229,3 +229,13 @@ supply beyond the 200 cap. Only the supply policy changes in this wave. Compare
 seeds 1/2/3 against `dbdba87`, now with a 1,200-game-second/300-wall-second cap so
 the earlier ten-minute censored outcomes can develop. Primary metric is blocked-
 supply sample fraction from 120–360 seconds; also track army, minerals and outcomes.
+
+
+Reproducibility correction: the earlier exploratory runs set SC2's game seed but
+did not seed Python's random placement choices inside BurnySC2. `--seed` now also
+seeds Python/NumPy at `on_start`, after process/port initialization. Diagnostics
+record `python_seed` and effective bot configuration; the comparison tool rejects
+different gameplay steps or Python seeds. Future matched experiments also apply
+this initialization to preserved baseline code through the local test harness.
+Earlier results remain exploratory; fixed seeds do not promise bit-for-bit server
+determinism. No host-wide or SimTrader random state is changed.

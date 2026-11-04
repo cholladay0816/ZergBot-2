@@ -10,6 +10,7 @@ MATCH_KEYS = (
     "map",
     "difficulty",
     "seed",
+    "python_seed",
     "realtime",
     "game_limit_seconds",
     "python",
@@ -77,6 +78,10 @@ def compare_pair(baseline, candidate):
     ]
     if mismatch:
         raise ValueError("Unmatched settings: " + ", ".join(mismatch))
+    if baseline.get("bot_config", {}).get("game_step") != candidate.get("bot_config", {}).get(
+        "game_step"
+    ):
+        raise ValueError("Unmatched game step")
     if baseline["limits"]["sample_frames"] != candidate["limits"]["sample_frames"]:
         raise ValueError("Unmatched sample cadence")
     return {

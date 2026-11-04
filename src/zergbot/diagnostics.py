@@ -113,6 +113,7 @@ class MatchDiagnostics:
         self.config = config or DiagnosticConfig()
         self.directory = directory
         self.metadata = safe_metadata(metadata)
+        self.bot_config = {}
         self.clock = clock
         self.started = clock()
         self.events = deque(maxlen=self.config.max_events)
@@ -177,6 +178,7 @@ class MatchDiagnostics:
         return {
             "schema_version": 1,
             "metadata": dict(self.metadata),
+            "bot_config": dict(self.bot_config),
             "limits": asdict(self.config),
             "outcome": self.outcome,
             "termination": self.termination,

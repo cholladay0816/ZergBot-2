@@ -1,3 +1,7 @@
+import random
+from dataclasses import asdict
+
+import numpy as np
 from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
 
@@ -20,6 +24,12 @@ class ZergBot(BotAI):
         self.economy = Economy(self.config)
 
     async def on_start(self) -> None:
+        # Reset after startup/port selection so library placement choices are paired.
+        random.seed(self.config.random_seed)
+        np.random.seed(self.config.random_seed)
+        if self.telemetry:
+            self.telemetry.recorder.bot_config = asdict(self.config)
+            self.telemetry.recorder.metadata["python_seed"] = self.config.random_seed
         self.client.game_step = self.config.game_step
         if self.telemetry and self.telemetry.recorder.config.enabled:
             ping = (await self.client.ping()).ping
