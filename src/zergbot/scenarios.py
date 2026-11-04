@@ -20,6 +20,7 @@ from sc2.player import Bot
 from sc2.position import Point2
 
 from .config import BotConfig
+from .harass_micro import HellionHarass
 from .queens import QueenManager
 from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
 from .tank_micro import split_waypoint
@@ -102,7 +103,7 @@ class MeasuredBot(BotAI):
     def do(self, action, *args, **kwargs):
         if hasattr(action, "unit"):
             self.commands[action.unit.tag] += 1
-            if action.unit.type_id in {U.QUEEN, U.REAPER}:
+            if action.unit.type_id in {U.QUEEN, U.REAPER, U.HELLION}:
                 self.record(
                     "own_command",
                     unit_type=action.unit.type_id.name,
@@ -191,6 +192,8 @@ class Defender(MeasuredBot):
         commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
         if self.options.scenario == "reaper":
             commands.append((U.REAPER, 1, attack, 2))
+        elif self.options.scenario == "hellion":
+            commands.append((U.HELLION, 2, attack, 2))
         elif self.options.scenario == "tank":
             commands.extend(
                 [
@@ -422,6 +425,7 @@ class Attacker(MeasuredBot):
     def __init__(self, options, output, setup_barrier=None):
         super().__init__(options, output, setup_barrier)
         self.retreating = False
+        self.hellion_controller = HellionHarass()
         self.previous_enemy = {}
         self.next_build = 0
 
@@ -440,6 +444,10 @@ class Attacker(MeasuredBot):
         if self.options.scenario == "reaper":
             for reaper in self.units(U.REAPER):
                 await self.reaper_step(reaper, workers, queens, home)
+        elif self.options.scenario == "hellion":
+            await self.hellion_controller.step(
+                self, list(self.units(U.HELLION)), workers, queens, home, self.options.approach
+            )
         elif self.options.scenario == "lings":
             for ling in self.units(U.ZERGLING):
                 targets = [u for u in workers if ling.distance_to(u) < 8] or workers or queens
@@ -638,7 +646,9 @@ def main():
     parser.add_argument("--map", default="AbyssalReefLE")
     parser.add_argument("--game-time-limit", type=int, default=90)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--scenario", choices=["reaper", "lings", "cannon", "tank"], required=True)
+    parser.add_argument(
+        "--scenario", choices=["reaper", "lings", "cannon", "tank", "hellion"], required=True
+    )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--worker-safety", action="store_true")
