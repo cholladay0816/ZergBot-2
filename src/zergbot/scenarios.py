@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,11 +18,22 @@ from sc2.position import Point2
 
 from .config import BotConfig
 from .queens import QueenManager
+from .tank_micro import split_waypoint
 
 
 def approach_point(base, center, approach):
     point = base.towards(center, 16)
     return point + Point2((0, (approach - 1) * 6))
+
+
+def escape_point(position, threat, pathable, distance=3):
+    candidates = [
+        position
+        + Point2((math.cos(i * math.pi / 8) * distance, math.sin(i * math.pi / 8) * distance))
+        for i in range(16)
+    ]
+    valid = [p for p in candidates if pathable(p) and pathable(position.towards(p, 1))]
+    return max(valid, key=lambda p: p.distance_to(threat)) if valid else None
 
 
 class MeasuredBot(BotAI):
@@ -105,6 +117,8 @@ class Defender(MeasuredBot):
         self.telemetry = None
         self.worker_tags = set()
         self.active_charges = set()
+        self.split_start = None
+        self.split_slots = {}
 
     async def on_start(self):
         self.client.game_step = 4
@@ -114,9 +128,18 @@ class Defender(MeasuredBot):
         attack = approach_point(base, self.game_info.map_center, self.options.approach)
         if not self.in_pathing_grid(attack):
             attack = base.towards(self.game_info.map_center, 16)
-        commands = [(U.QUEEN, 1, queen, 1)]
+        commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
         if self.options.scenario == "reaper":
             commands.append((U.REAPER, 1, attack, 2))
+        elif self.options.scenario == "tank":
+            commands.extend(
+                [
+                    (U.ZERGLING, 12, queen, 1),
+                    (U.BANELING, 4, queen, 1),
+                    (U.OVERLORD, 1, base.towards(self.game_info.map_center, 10), 1),
+                    (U.SIEGETANKSIEGED, 1, attack, 2),
+                ]
+            )
         elif self.options.scenario == "lings":
             commands.append((U.ZERGLING, 6, attack, 2))
         else:
@@ -143,6 +166,8 @@ class Defender(MeasuredBot):
 
     async def on_step(self, iteration):
         self.begin_frame()
+        if self.options.scenario == "tank":
+            self.tank_defense()
         queens = list(self.units(U.QUEEN))
         abilities = await self.get_available_abilities(queens) if queens else []
         await self.manager.step(
@@ -204,6 +229,58 @@ class Defender(MeasuredBot):
         self.counts["workers_lost"] = len(self.worker_tags - {u.tag for u in self.workers})
         self.end_frame()
 
+    def tank_defense(self):
+        army = list(self.units.of_type({U.ZERGLING, U.BANELING}))
+        tanks = self.enemy_units.of_type({U.SIEGETANK, U.SIEGETANKSIEGED})
+        if tanks and self.split_start is None:
+            self.split_start = self.state.game_loop
+            self.split_slots = {u.tag: i for i, u in enumerate(sorted(army, key=lambda u: u.tag))}
+        for unit in army:
+            if tanks:
+                tank = tanks.closest_to(unit)
+                waypoint = (
+                    split_waypoint(
+                        unit.position,
+                        tank.position,
+                        self.start_location,
+                        self.split_slots.get(unit.tag, 0),
+                        self.state.game_loop - self.split_start,
+                        self.in_pathing_grid,
+                    )
+                    if self.options.controller == "micro"
+                    else None
+                )
+                if waypoint is not None:
+                    unit.move(waypoint)
+                else:
+                    unit.attack(tank)
+            elif self.split_start is None:
+                unit.attack(
+                    approach_point(
+                        self.start_location, self.game_info.map_center, self.options.approach
+                    )
+                )
+        if self.state.game_loop % 16 == 0:
+            distances = [a.distance_to(b) for i, a in enumerate(army) for b in army[i + 1 :]]
+            self.record(
+                "tank_army_sample",
+                units=[
+                    dict(
+                        tag=int(u.tag),
+                        type=u.type_id.name,
+                        position=list(u.position),
+                        health=float(u.health),
+                    )
+                    for u in army
+                ],
+                min_pair_distance=float(min(distances)) if distances else None,
+                tank_visible=bool(tanks),
+                tank_health=[float(t.health) for t in tanks],
+                split_elapsed_frames=int(self.state.game_loop - self.split_start)
+                if self.split_start is not None
+                else None,
+            )
+
 
 class Attacker(MeasuredBot):
     def __init__(self, options, output):
@@ -239,6 +316,21 @@ class Attacker(MeasuredBot):
                     ling.attack(target)
                 else:
                     ling.attack(home)
+        elif self.options.scenario == "tank":
+            for tank in self.units.of_type({U.SIEGETANK, U.SIEGETANKSIEGED}):
+                targets = list(self.enemy_units.of_type({U.ZERGLING, U.BANELING}))
+                if targets:
+                    # The scripted tank selects visible clusters, not hidden units.
+                    target = max(
+                        targets, key=lambda u: sum(v.distance_to(u) < 1.5 for v in targets)
+                    )
+                    tank.attack(target)
+                    self.record(
+                        "tank_target",
+                        tag=int(target.tag),
+                        position=list(target.position),
+                        own_cooldown=float(tank.weapon_cooldown),
+                    )
         else:
             await self.cannon_step(home)
         self.previous_enemy = {u.tag: (u.position, self.state.game_loop) for u in self.enemy_units}
@@ -251,7 +343,7 @@ class Attacker(MeasuredBot):
         self.counts["moved_during_own_cooldown_frames"] += (
             reaper.weapon_cooldown > 0 and moved > 0.05
         )
-        if reaper.health_percentage < 0.35:
+        if reaper.health_percentage < 0.55:
             self.retreating = True
         elif reaper.health_percentage > 0.9:
             self.retreating = False
@@ -271,13 +363,13 @@ class Attacker(MeasuredBot):
         queen = min(queens, key=reaper.distance_to) if queens else None
         reason = "approach"
         if self.retreating:
-            point = (
-                reaper.position.towards((queen or target).position, -4)
-                if queen or target
-                else home.towards(self.game_info.map_center, 25)
-            )
-            if self.in_pathing_grid(point):
+            threat = (queen or target).position if queen or target else home
+            point = escape_point(reaper.position, threat, self.in_pathing_grid, 4)
+            if point is not None:
                 reaper.move(point)
+            else:
+                reaper.stop()
+                self.counts["blocked_retreat_frames"] += 1
             reason = "health_retreat"
         else:
             available = (await self.get_available_abilities([reaper]))[0]
@@ -308,9 +400,12 @@ class Attacker(MeasuredBot):
                 )
                 reason = "grenade"
             elif reaper.weapon_cooldown > 0 and queen is not None and reaper.distance_to(queen) < 9:
-                point = reaper.position.towards(queen.position, -2.5)
-                if self.in_pathing_grid(point):
+                point = escape_point(reaper.position, queen.position, self.in_pathing_grid, 2.5)
+                if point is not None:
                     reaper.move(point)
+                else:
+                    reaper.stop()
+                    self.counts["blocked_kite_frames"] += 1
                 reason = "cooldown_kite"
             elif target is not None:
                 reaper.attack(target)
@@ -376,7 +471,7 @@ def main():
     parser.add_argument("--map", default="AbyssalReefLE")
     parser.add_argument("--game-time-limit", type=int, default=90)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--scenario", choices=["reaper", "lings", "cannon"], required=True)
+    parser.add_argument("--scenario", choices=["reaper", "lings", "cannon", "tank"], required=True)
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     args = parser.parse_args()

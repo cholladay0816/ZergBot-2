@@ -38,3 +38,11 @@ def test_worker_interception_does_not_back_away_from_side_mineral_line():
     assert motion is not None and motion.y > 0
     # A ready in-range shot is never replaced by a cooldown reposition command.
     assert defend_motion(position, base, enemy, 0, 5, 1, lambda p: True, protected) is None
+
+
+def test_scripted_reaper_chooses_pathable_alternative_instead_of_leaving_attack_order():
+    from zergbot.scenarios import escape_point
+
+    point = escape_point(Point2((0, 0)), Point2((3, 0)), lambda p: p.y >= 0 and p.x >= 0)
+    assert point is not None and point.y > 0
+    assert escape_point(Point2((0, 0)), Point2((3, 0)), lambda p: False) is None

@@ -229,3 +229,20 @@ def test_confirmed_destruction_prunes_counter_memory():
     memory.destroyed(1)
     memory.destroyed(2)
     assert memory.target() == 0
+
+
+def test_mixed_army_strength_and_upgrade_gate_preserve_emergency_defense():
+    from zergbot.agents import Action, Observation
+    from zergbot.strategy import ArmyStrategy
+
+    units = [Observation(i, 1, False) for i in range(6)]
+    strategy = ArmyStrategy()
+    orders = strategy.orders(units, False, C, support_strength=6, allow_offense=False)
+    assert all(o.action is Action.RETREAT for o in orders)
+    orders = strategy.orders(units, True, C, support_strength=6, allow_offense=False)
+    assert all(o.action is Action.ATTACK for o in orders)
+    assert not strategy.attacking
+    strategy.orders(units, False, C, support_strength=6, allow_offense=True)
+    assert strategy.attacking
+    strategy.orders(units, False, C, support_strength=0)
+    assert not strategy.attacking

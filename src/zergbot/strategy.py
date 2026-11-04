@@ -18,6 +18,8 @@ class ArmyStrategy:
         config: BotConfig,
         *,
         worker_target: tuple[float, float] | None = None,
+        support_strength: int = 0,
+        allow_offense: bool = True,
         positions: dict[int, tuple[float, float]] | None = None,
     ) -> list[Intent]:
         healthy = [u for u in units if not u.burrowed and u.health >= config.emerge_health]
@@ -43,9 +45,10 @@ class ArmyStrategy:
                 available[: max(0, config.worker_defenders - len(self.defenders))]
             )
         # One wounded/burrowing member must not recall an otherwise viable army.
+        strength = len(healthy) + max(0, support_strength)
         if self.attacking:
-            self.attacking = len(healthy) > config.regroup_roaches
-        elif len(healthy) >= config.attack_roaches:
+            self.attacking = strength > config.regroup_roaches
+        elif allow_offense and strength >= config.attack_roaches:
             self.attacking = True
         attack = under_attack or self.attacking
         return [

@@ -2,6 +2,7 @@
 
 import numpy as np
 from sc2.ids.unit_typeid import UnitTypeId as U
+from sc2.ids.upgrade_id import UpgradeId as G
 from sc2.position import Point2
 
 WORKERS = {U.SCV, U.PROBE, U.DRONE}
@@ -130,6 +131,13 @@ class AdaptiveArmy:
                 and bot.workers.amount >= 32
                 and screen >= self.config.defensive_roaches
             )
+        if (
+            den.ready
+            and bot.units(U.HYDRALISK).amount >= 4
+            and not bot.already_pending_upgrade(G.EVOLVEGROOVEDSPINES)
+        ):
+            if bot.research(G.EVOLVEGROOVEDSPINES):
+                return True
         if den.ready and bot.units(U.HYDRALISK).amount + bot.already_pending(U.HYDRALISK) < target:
             if bot.train(U.HYDRALISK):
                 self.event(bot, "hydra_production", "submitted", target_count=target)

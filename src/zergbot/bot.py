@@ -4,6 +4,7 @@ from dataclasses import asdict
 import numpy as np
 from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.upgrade_id import UpgradeId
 from sc2.position import Point2
 
 from .adaptive import AdaptiveArmy
@@ -100,6 +101,16 @@ class ZergBot(BotAI):
             bool(threats) and not small_worker_incursion,
             self.config,
             worker_target=worker_target,
+            support_strength=sum(
+                u.health_percentage >= 0.7 for u in self.units(UnitTypeId.HYDRALISK)
+            )
+            if self.config.adaptive_army
+            else 0,
+            allow_offense=not (self.config.roach_tech or self.config.adaptive_army)
+            or self.time >= 480
+            or {UpgradeId.GLIALRECONSTITUTION, UpgradeId.ZERGMISSILEWEAPONSLEVEL1}.issubset(
+                self.state.upgrades
+            ),
             positions={tag: tuple(unit.position) for tag, unit in self.gateway.units.items()},
         ):
             arbiter.submit(intent)
