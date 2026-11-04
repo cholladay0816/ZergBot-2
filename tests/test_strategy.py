@@ -64,3 +64,38 @@ def test_no_nearby_healthy_defender_does_not_recall_distant_army():
     )
     assert not s.defenders
     assert all(o.reason == "army_objective" for o in orders)
+
+
+def test_attack_posture_has_distinct_launch_and_regroup_thresholds():
+    s = ArmyStrategy()
+    assert all(o.action is Action.RETREAT for o in s.orders(roster(11), False, C))
+    assert all(o.action is Action.ATTACK for o in s.orders(roster(12), False, C))
+    assert all(o.action is Action.ATTACK for o in s.orders(roster(11), False, C))
+    assert all(o.action is Action.ATTACK for o in s.orders(roster(7), False, C))
+    assert all(o.action is Action.RETREAT for o in s.orders(roster(6), False, C))
+    assert all(o.action is Action.RETREAT for o in s.orders(roster(11), False, C))
+    assert all(o.action is Action.ATTACK for o in s.orders(roster(12), False, C))
+    s.orders([], False, C)
+    assert not s.attacking
+
+
+def test_defense_bypasses_regroup_without_granting_small_army_offensive_posture():
+    s = ArmyStrategy()
+    assert all(o.action is Action.ATTACK for o in s.orders(roster(3), True, C))
+    assert not s.attacking
+    assert all(o.action is Action.RETREAT for o in s.orders(roster(3), False, C))
+
+
+def test_wounded_and_burrowed_units_do_not_hold_attack_posture():
+    s = ArmyStrategy()
+    s.orders(roster(), False, C)
+    units = roster(6) + [Observation(90, 0.5, False), Observation(91, 1, True)]
+    s.orders(units, False, C)
+    assert not s.attacking
+
+
+def test_invalid_regroup_threshold_rejected():
+    import pytest
+
+    with pytest.raises(ValueError, match="Regroup"):
+        BotConfig(regroup_roaches=12)

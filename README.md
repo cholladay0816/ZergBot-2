@@ -261,3 +261,13 @@ and fewer roaches, so this supports improved supply availability without claimin
 uniform production improvement or a stable win-rate advantage. No invalid hatchery
 placements occurred in these six runs. The local wave2-supply comparison preserves
 source artifact paths and hashes. Larger supply buffers are retained for later waves.
+
+
+Wave 4 candidate hypothesis: the single 12-healthy-roach attack threshold recalls
+the whole army as soon as one member is wounded or burrows. In supply-candidate
+seed 2, retained evidence recorded 656 healthy army-retreat decisions after 400
+seconds, often eleven at the same frame. The candidate launches at twelve healthy
+roaches and keeps attacking until six or fewer remain healthy and exposed. Local
+survival vetoes and immediate base defense still apply. Compare matched outcomes
+and healthy retreat transitions, rather than assuming fewer retreats means better
+combat. Missing/burrowed units cannot hold the offensive posture alive.

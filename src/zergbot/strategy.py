@@ -9,6 +9,7 @@ from .config import BotConfig
 class ArmyStrategy:
     def __init__(self):
         self.defenders: set[int] = set()
+        self.attacking = False
 
     def orders(
         self,
@@ -41,7 +42,12 @@ class ArmyStrategy:
             self.defenders.update(
                 available[: max(0, config.worker_defenders - len(self.defenders))]
             )
-        attack = under_attack or len(healthy) >= config.attack_roaches
+        # One wounded/burrowing member must not recall an otherwise viable army.
+        if self.attacking:
+            self.attacking = len(healthy) > config.regroup_roaches
+        elif len(healthy) >= config.attack_roaches:
+            self.attacking = True
+        attack = under_attack or self.attacking
         return [
             Intent(u.tag, Action.ATTACK, 10, "worker_defense", worker_target)
             if u.tag in self.defenders
