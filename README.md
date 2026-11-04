@@ -136,7 +136,7 @@ Partial replay passes retain their own failure/timeout artifacts.
 
 ## Validation and remaining work
 
-The November 4, 2026 checkpoint passed **152 offline tests**, lint/format checks,
+The November 4, 2026 checkpoint passed **185 offline tests**, lint/format checks,
 compilation, dependency checks and wheel validation. Tests cover pure decisions,
 morph continuity/timeouts, capability fallbacks, command arbitration, real SC2 command
 construction, economy priorities, diagnostic bounds/privacy, replay provenance, CLI
@@ -161,3 +161,12 @@ Experimental visible-detector recovery is available via `--avoid-detected-burrow
 Its three matched Harder race probes yielded two defeats and one unresolved cap, so it was not
 promoted. It requires observed detection coverage and a nearby ground threat; it cannot infer
 unseen detectors or exact damage sources. See the [phase ledger](docs/phase2-experiments.md).
+
+## Adaptive build and controlled micro validation
+
+The latest optional wave adds `--roach-tech`, `--adaptive-army`, and
+`--queen-tactical-micro`. They remain off pending broader evidence. See the
+[dated build references and matched results](docs/adaptive-build-2026-11-04.md)
+and [controlled scenario evidence and limitations](docs/scenarios-2026-11-04.md).
+Hydralisks are not assumed to counter every air composition. The scenario harness
+is isolated from competitive decisions and does not establish perfect micro.
