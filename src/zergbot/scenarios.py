@@ -333,7 +333,7 @@ class Defender(MeasuredBot):
             for w in sorted(
                 self.workers,
                 key=lambda w: (-w.health_percentage, w.distance_to(threats.closest_to(w))),
-            )[:6]
+            )[: self.options.worker_defense_count]
         }
         handled = set()
         active = set()
@@ -642,6 +642,7 @@ def main():
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--worker-safety", action="store_true")
+    parser.add_argument("--worker-defense-count", type=int, choices=range(1, 13), default=6)
     parser.add_argument("--worker-defense-seconds", type=int, default=10)
     parser.add_argument("--queen-recovery", action="store_true")
     parser.add_argument("--ingress", choices=["frontal", "minerals"], default="frontal")

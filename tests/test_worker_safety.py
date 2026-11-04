@@ -91,7 +91,7 @@ def test_expired_defense_releases_once_even_while_threat_remains():
         worker_defenders={7},
         worker_defense_start=0,
         state=SimpleNamespace(game_loop=1000),
-        options=SimpleNamespace(worker_defense_seconds=10),
+        options=SimpleNamespace(worker_defense_seconds=10, worker_defense_count=6),
         counts=Counter(),
     )
     assert Defender.protect_workers(bot) == {7}
@@ -99,3 +99,63 @@ def test_expired_defense_releases_once_even_while_threat_remains():
     assert Defender.protect_workers(bot) == set()
     assert orders == ["mineral"]
     assert bot.counts["worker_mine_commands"] == 1
+
+
+def test_worker_pull_obeys_selected_participation_cap():
+    from collections import Counter
+    from types import SimpleNamespace
+
+    from zergbot.scenarios import Defender
+
+    class Threats(list):
+        def filter(self, predicate):
+            return self
+
+        def closer_than(self, distance, position):
+            return self
+
+        def closest_to(self, worker):
+            return self[0]
+
+    class Minerals:
+        def closer_than(self, distance, position):
+            return self
+
+    for count in (1, 6, 12):
+        orders = []
+        workers = [
+            SimpleNamespace(
+                tag=i,
+                health_percentage=1,
+                distance_to=lambda _: 2,
+                attack=lambda enemy, tag=i, recorder=orders: recorder.append(tag),
+            )
+            for i in range(12)
+        ]
+        bot = SimpleNamespace(
+            enemy_units=Threats([SimpleNamespace(health=35)]),
+            mineral_field=Minerals(),
+            start_location=None,
+            workers=workers,
+            worker_defenders=set(),
+            worker_defense_start=0,
+            state=SimpleNamespace(game_loop=1),
+            options=SimpleNamespace(worker_defense_seconds=10, worker_defense_count=count),
+            counts=Counter(),
+        )
+        handled = Defender.protect_workers(bot)
+        assert len(orders) == len(handled) == count
+        assert set(orders) == handled == bot.worker_defenders
+
+
+def test_scenario_worker_count_rejects_unbounded_pull(monkeypatch):
+    import pytest
+
+    from zergbot.scenarios import main
+
+    monkeypatch.setattr(
+        "sys.argv", ["scenario", "--scenario", "lings", "--worker-defense-count", "13"]
+    )
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
