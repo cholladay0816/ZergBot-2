@@ -7,6 +7,7 @@ class BotConfig:
     emerge_health: float = 0.80
     retry_frames: int = 8
     morph_timeout_frames: int = 64
+    burrow_escape_frames: int = 112
     workers: int = 44
     defensive_roaches: int = 6
     supply_buffer_min: int = 8
@@ -27,6 +28,7 @@ class BotConfig:
             min(
                 self.retry_frames,
                 self.morph_timeout_frames,
+                self.burrow_escape_frames,
                 self.workers,
                 self.defensive_roaches,
                 self.supply_buffer_min,

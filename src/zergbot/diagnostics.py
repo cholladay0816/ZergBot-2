@@ -63,6 +63,7 @@ EVENT_FIELDS = {
         "can_emerge",
         "researched",
         "recovering",
+        "escape_until_frame",
         "pending_morph",
         "observed_order",
     },

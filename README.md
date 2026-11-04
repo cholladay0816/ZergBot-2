@@ -271,3 +271,14 @@ roaches and keeps attacking until six or fewer remain healthy and exposed. Local
 survival vetoes and immediate base defense still apply. Compare matched outcomes
 and healthy retreat transitions, rather than assuming fewer retreats means better
 combat. Missing/burrowed units cannot hold the offensive posture alive.
+
+
+Wave 5 candidate hypothesis: waiting to heal is unsafe when a buried roach is
+actually losing HP. Defender seed 2 retained 341 damage observations on buried
+roaches and 78 buried-roach destruction observations. The candidate responds to an
+HP decrease across two consecutive buried observations by requesting emergence,
+then retreating for a bounded 112-frame escape interval before considering another
+burrow. It does not infer a detector, caster or attacker from that HP loss. Missing
+emerge capability waits safely, and legitimate morphs retain their transition
+guard. Compare outcomes and buried losses against the preceding retained policy;
+escaping can itself expose a unit to more damage, so this remains experimental.

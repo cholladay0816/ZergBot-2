@@ -178,6 +178,7 @@ class TelemetryAdapter:
                     can_emerge=obs.can_emerge,
                     researched=obs.burrow_researched,
                     recovering=agent.recovering,
+                    escape_until_frame=agent.escape_until_frame,
                     pending_morph=agent.pending_morph.name if agent.pending_morph else None,
                     observed_order=obs.transition.name if obs.transition else None,
                 )

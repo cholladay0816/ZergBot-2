@@ -56,10 +56,23 @@ class RoachAgent:
     last_attempt_frame: int = -1000000
     pending_morph: Action | None = None
     previous_transition: Action | None = None
+    previous_health: float | None = None
+    previous_burrowed: bool = False
+    escape_until_frame: int = -1
 
     def decide(self, obs: Observation, frame: int, config: BotConfig) -> Intent | None:
         if obs.tag != self.tag:
             raise ValueError("Observation tag does not match agent")
+        # Losing observed HP while already hidden proves hiding is not currently
+        # safe, without guessing whether detection, splash or a spell caused it.
+        if (
+            obs.burrowed
+            and self.previous_burrowed
+            and self.previous_health is not None
+            and obs.health < self.previous_health - 1e-6
+        ):
+            self.escape_until_frame = frame + config.burrow_escape_frames
+        self.previous_health, self.previous_burrowed = obs.health, obs.burrowed
         if obs.health <= config.burrow_health or obs.burrowed:
             self.recovering = True
         if not obs.burrowed and obs.health >= config.emerge_health:
@@ -84,11 +97,19 @@ class RoachAgent:
                 # A continuously stale order must not restart this timer. After
                 # timeout, retry if available, otherwise retreat exposed / wait hidden.
                 self.pending_morph = None
-        if not self.recovering:
+        escaping = frame < self.escape_until_frame
+        if not self.recovering and not escaping:
             return None
         ready = frame - self.last_attempt_frame >= config.retry_frames
         reason = "healing"
-        if obs.burrowed:
+        if escaping:
+            if not obs.burrowed:
+                action, reason = Action.RETREAT, "escape_after_burrow_damage"
+            elif obs.can_emerge and ready:
+                action, reason = Action.EMERGE, "damaged_while_burrowed"
+            else:
+                action, reason = Action.WAIT, "escape_emerge_unavailable"
+        elif obs.burrowed:
             action = Action.WAIT
             if obs.health >= config.emerge_health and obs.can_emerge and ready:
                 action = Action.EMERGE

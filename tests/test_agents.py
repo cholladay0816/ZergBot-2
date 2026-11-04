@@ -146,3 +146,57 @@ def test_stale_observed_order_does_not_restart_timeout():
 def test_invalid_morph_timeout():
     with pytest.raises(ValueError):
         BotConfig(morph_timeout_frames=0)
+
+
+def test_damage_while_hidden_requests_emergence_and_then_bounded_escape():
+    agent = RoachAgent(1)
+    assert agent.decide(obs(0.5, True), 0, C).action is Action.WAIT
+    intent = agent.decide(obs(0.45, True), 4, C)
+    assert intent.action is Action.EMERGE and intent.reason == "damaged_while_burrowed"
+    assert agent.decide(obs(0.45, True), 8, C).reason == "morph_in_flight"
+    exposed = agent.decide(obs(0.45), 24, C)
+    assert exposed.action is Action.RETREAT
+    assert exposed.reason == "escape_after_burrow_damage"
+    assert agent.decide(obs(0.45), 100, C).action is Action.RETREAT
+    assert agent.decide(obs(0.45), 116, C).action is Action.BURROW
+
+
+def test_hidden_damage_waits_for_available_emergence_without_guessing_research():
+    agent = RoachAgent(1)
+    agent.decide(obs(0.5, True), 0, C)
+    blocked = agent.decide(obs(0.45, True, can_emerge=False, researched=False), 4, C)
+    assert blocked.action is Action.WAIT
+    assert blocked.reason == "escape_emerge_unavailable"
+    assert agent.decide(obs(0.45, True, researched=False), 8, C).action is Action.EMERGE
+
+
+def test_healing_hidden_unit_and_damage_on_first_hidden_observation_do_not_trigger_escape():
+    agent = RoachAgent(1)
+    agent.decide(obs(0.4), 0, C)
+    assert agent.decide(obs(0.3, True), 32, C).reason == "healing"
+    assert agent.decide(obs(0.35, True), 36, C).reason == "healing"
+    assert agent.escape_until_frame == -1
+
+
+def test_burrow_damage_never_interrupts_legitimate_pending_transition():
+    from dataclasses import replace
+
+    agent = RoachAgent(1)
+    agent.decide(obs(0.4), 0, C)
+    transitional = replace(obs(0.35, True), transition=Action.BURROW)
+    assert agent.decide(transitional, 4, C).reason == "morph_in_flight"
+    transitional = replace(obs(0.3, True), transition=Action.BURROW)
+    assert agent.decide(transitional, 8, C).reason == "morph_in_flight"
+    assert agent.decide(obs(0.3, True), 20, C).action is Action.EMERGE
+
+
+def test_escape_order_still_overrides_strategy_even_after_health_recovers():
+    agent = RoachAgent(1)
+    agent.decide(obs(0.7, True), 0, C)
+    agent.decide(obs(0.6, True), 4, C)
+    intent = agent.decide(obs(0.9), 24, C)
+    arbiter = CommandArbiter()
+    arbiter.submit(Intent(1, Action.ATTACK, 10))
+    arbiter.submit(intent)
+    assert arbiter.commands[1].action is Action.RETREAT
+    assert agent.decide(obs(0.9), 116, C) is None
