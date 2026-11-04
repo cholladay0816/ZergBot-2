@@ -30,8 +30,10 @@ positions/effects and its own cooldown. KD8 is the installed library's `KD8CHARG
 | 2/3 | baseline | 0 | 117.38 | 112.00 | 4 | 77 | 1020 |
 | 2/3 | micro | 0 | 109.63 | 92.00 | 3 | 77 | 1020 |
 
-All six runs preserved 12 workers and both combatants survived; four grenade attempts
-were matched by four observed charge episodes per run. No conflicting per-unit command
+All six runs preserved 12 workers and both combatants survived. Each attacker recorded
+four grenade attempts. The defender observed four charge episodes in five runs, but
+only three in micro approach 2 (seed 3). The fourth attempt in that run is not confirmed
+by a defender-observed charge; an attempt alone does not prove a spawned or visible effect. No conflicting per-unit command
 frames were recorded. The optional queen micro did less Reaper damage in all three pairs
 and worsened queen damage in one. It is **not promoted**. The Reaper repeatedly retreats
 and re-engages; this is stronger than a stationary target but does not establish optimality.

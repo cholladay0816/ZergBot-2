@@ -10,10 +10,12 @@ References are sequencing benchmarks, not a claim of current tournament-best str
 - PiG's popular historical ZvZ teaching all-in, April 2023, patch 5.0.11:
   https://lotv.spawningtool.com/build/175116/ . Its +1/speed coordination is useful;
   this candidate does not copy its fixed drone cut or make an unconditional all-in.
-- Cypem's February 2026 12-worker training replays, not competitive win-rate evidence:
-  https://lotv.spawningtool.com/build/201029/playable/ and
-  https://lotv.spawningtool.com/build/201039/playable/ .
-  Both support weapon/speed investment before discretionary Burrow.
+- Cypem's 12-worker training demonstrations, not competitive win-rate evidence:
+  the ZvZ replay is dated February 4, 2026 (https://lotv.spawningtool.com/89670/),
+  with build https://lotv.spawningtool.com/build/201029/playable/ .
+  The ZvT build https://lotv.spawningtool.com/build/201039/playable/ has an
+  unverified replay date in this review. Both inform weapon/speed sequencing;
+  the dated ZvZ sequence supports delaying discretionary Burrow.
 - Cypem's February 7 ZvP roach/hydra demonstration: https://lotv.spawningtool.com/89666/ .
 - Recent community roach/hydra/lurker outline still tagged 5.0.16:
   https://lotv.spawningtool.com/build/204804/ . No Lurker/spellcaster stack is copied.
