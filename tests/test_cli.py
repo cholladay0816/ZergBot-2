@@ -7,7 +7,14 @@ from zergbot.__main__ import main
 
 @pytest.mark.parametrize(
     "option,value",
-    [("--worker-defenders", "-1"), ("--burrow-escape-frames", "-1"), ("--regroup-roaches", "12")],
+    [
+        ("--worker-defenders", "-1"),
+        ("--burrow-escape-frames", "-1"),
+        ("--regroup-roaches", "12"),
+        ("--macro-larva-limit", "0"),
+        ("--scout-fresh-frames", "0"),
+        ("--extra-queens", "-1"),
+    ],
 )
 def test_invalid_experiment_controls_fail_before_game_launch(monkeypatch, capsys, option, value):
     monkeypatch.setattr(sys, "argv", ["zergbot2", option, value])

@@ -39,6 +39,18 @@ class DiagnosticConfig:
 # Values are built from explicit numeric/enum game fields at the adapter boundary.
 # Unknown fields are rejected rather than accidentally logging object reprs or secrets.
 EVENT_FIELDS = {
+    "macro_state": {
+        "resource_bases",
+        "ready_resource_bases",
+        "production_hatcheries",
+        "worker_target",
+        "queen_target",
+        "macro_ready",
+        "scarcity_since_frame",
+        "minerals",
+        "larvae",
+        "threatened",
+    },
     "queen_decision": {"tag", "role", "action", "scope"},
     "muta_assessment": {
         "verdict",
@@ -50,6 +62,8 @@ EVENT_FIELDS = {
         "visible_workers",
         "remembered_local_aa",
         "remembered_mobile_counter",
+        "remembered_counter_tech",
+        "uncertainty",
         "scope",
     },
     "search_waypoint": {"previous", "target", "route_index", "reason", "scope"},
@@ -427,6 +441,20 @@ def write_artifacts(directory, payload):
     from .combat_report import action_error_description, combat_lines
 
     lines += combat_lines(payload)
+    macro_events = [e for e in payload["events"] if e["kind"] == "macro_state"]
+    if macro_events:
+        latest = macro_events[-1]
+        lines += [
+            "",
+            "## Resource bases and production hatcheries",
+            "",
+            f"Latest observed resource bases: {latest['resource_bases']}; "
+            f"production hatcheries away from resource sites: {latest['production_hatcheries']}; "
+            f"worker target: {latest['worker_target']}; queen target: {latest['queen_target']}.",
+            f"Macro gate ready: {latest['macro_ready']}; "
+            f"scarcity began at frame: {latest['scarcity_since_frame']}. "
+            f"Evidence event: {latest['id']}.",
+        ]
     queen_events = [e for e in payload["events"] if e["kind"] == "queen_decision"]
     assessments = [e for e in payload["events"] if e["kind"] == "muta_assessment"]
     if queen_events or assessments:

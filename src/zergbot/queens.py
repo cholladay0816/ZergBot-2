@@ -19,6 +19,17 @@ def queen_priority(
     return "creep" if can_creep else "rally"
 
 
+def ground_threat(unit):
+    # Some special-attack units lack weapon-table entries in the current API.
+    # Treat their type as a possible threat; do not infer cooldown or a current target.
+    return unit.can_attack_ground or unit.type_id in {U.VOIDRAY, U.CARRIER}
+
+
+def base_threat(unit):
+    # Air-only attackers threaten overlords and can require base defense too.
+    return unit.can_attack_air or ground_threat(unit)
+
+
 class QueenManager:
     def __init__(self, config):
         self.config = config
@@ -73,12 +84,18 @@ class QueenManager:
             base = roles.get(queen.tag) or min(bases, key=queen.distance_to)
             role = "inject" if queen.tag in roles else "defense_creep"
             available = abilities.get(queen.tag, set())
-            threats = bot.enemy_units.filter(
-                lambda e, base=base: e.can_attack_ground and e.distance_to(base) < 15
+            armed = (bot.enemy_units | bot.enemy_structures).filter(base_threat)
+            threats = armed.closer_than(15, base)
+            direct = armed.closer_than(7, queen).filter(
+                lambda enemy, queen=queen: (
+                    enemy.can_attack_air if queen.is_flying else ground_threat(enemy)
+                )
             )
-            direct = threats.closer_than(7, queen)
             # Dedicated inject queens respond locally; extras intercept base threats.
-            defending = bool(threats) and (role != "inject" or not extras)
+            nearby_extras = [
+                q for q in extras if q.health_percentage >= 0.3 and q.distance_to(base) < 20
+            ]
+            defending = bool(threats) and (role != "inject" or not nearby_extras)
             action = queen_priority(
                 critical=queen.health_percentage < 0.3,
                 direct_threat=bool(direct),
@@ -93,7 +110,7 @@ class QueenManager:
                 enemy = direct.closest_to(queen)
                 queen.move(queen.position.towards(enemy.position, -5))
             elif action == "defend":
-                enemy = threats.closest_to(queen)
+                enemy = (direct or threats).closest_to(queen)
                 queen.attack(enemy)
             elif action == "inject":
                 queen(A.EFFECT_INJECTLARVA, base)

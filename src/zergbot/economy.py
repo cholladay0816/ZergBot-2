@@ -33,6 +33,7 @@ class Economy:
         ):
             await bot.distribute_workers()
         if not bot.townhalls.ready:
+            self.macro_gate.limited_since = None
             return
         # Resource bases are map expansion sites, not arbitrary production hatcheries.
         resource_bases = [
@@ -57,6 +58,26 @@ class Economy:
             bot.larva.amount,
             threatened,
         )
+        # Observe every step, including steps where supply/production returns early.
+        macro_count = bot.townhalls.amount - len(resource_bases)
+        macro_ready = self.macro_gate.ready(
+            state, self.config, bot.state.game_loop, macro_count, bot.already_pending(U.HATCHERY)
+        )
+        if bot.state.game_loop % 224 == 0 and getattr(bot, "telemetry", None):
+            bot.telemetry.recorder.record(
+                "macro_state",
+                bot.state.game_loop,
+                resource_bases=len(resource_bases),
+                ready_resource_bases=len(ready_resources),
+                production_hatcheries=macro_count,
+                worker_target=worker_target(state, self.config),
+                queen_target=queen_target(state, self.config),
+                macro_ready=macro_ready,
+                scarcity_since_frame=self.macro_gate.limited_since,
+                minerals=state.minerals,
+                larvae=state.larvae,
+                threatened=state.threatened,
+            )
         if iteration % 8 == 0 and self.config.adaptive_economy:
             self.rebalance_gas(bot, state)
         home = bot.townhalls.ready.first
@@ -130,13 +151,7 @@ class Economy:
         if bot.workers.amount + bot.already_pending(U.DRONE) < worker_goal:
             if bot.train(U.DRONE):
                 return
-        if self.macro_gate.ready(
-            state,
-            self.config,
-            bot.state.game_loop,
-            bot.townhalls.amount - len(resource_bases),
-            bot.already_pending(U.HATCHERY),
-        ):
+        if macro_ready:
             if await self.try_macro(bot, home):
                 return
         if bot.structures(U.ROACHWARREN).ready:

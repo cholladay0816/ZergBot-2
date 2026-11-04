@@ -217,3 +217,27 @@ def test_actual_attack_reserves_army_before_optional_queen_spending():
     bot.enemy_units.filter.return_value.closer_than.return_value = Group([object()])
     asyncio.run(Economy(BotConfig()).step(bot, 1))
     bot.train.assert_called_once_with(U.ROACH)
+
+
+def test_macro_timer_observes_supply_preemption_and_resets_stale_scarcity():
+    bot = economy_bot()
+    config = BotConfig(
+        macro_after_bases=1,
+        macro_min_workers=10,
+        macro_min_minerals=100,
+        macro_wait_frames=8,
+        max_bases=1,
+    )
+    economy = Economy(config)
+    asyncio.run(economy.step(bot, 1))
+    assert economy.macro_gate.limited_since == 0
+    bot.state.game_loop = 8
+    bot.larva = Group([object()] * 10)
+    bot.supply_left = 2
+    asyncio.run(economy.step(bot, 2))
+    assert economy.macro_gate.limited_since is None
+    bot.state.game_loop = 12
+    bot.larva = Group([object()])
+    asyncio.run(economy.step(bot, 3))
+    assert economy.macro_gate.limited_since == 12
+    bot.build.assert_not_awaited()

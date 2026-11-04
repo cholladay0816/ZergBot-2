@@ -42,7 +42,7 @@ the first production safety check. One mineral/gas spending choice is made per s
 
 One additional macro hatch is allowed after three ready RESOURCE bases, at least 50 workers,
 600 minerals and at most three larvae persist for 224 game frames without a visible home attack.
-Pending hatcheries block duplicates. Placement must be on creep, away from resource-base sites,
+Pending hatcheries block duplicates. Scarcity is observed every step, including frames where supply or other spending returns early; losing eligibility resets the timer. Placement must be on creep, away from resource-base sites,
 and away from visible enemies; retries are bounded. The macro hatch gets its own inject queen.
 This is a conditional throughput response, not an unconditional early hatch investment.
 
@@ -57,22 +57,22 @@ from this controller per step; no other module sends queen commands.
 
 Roaches, queens and mature tumors share one batched ability query. Creep placement uses at most
 one query/command per 32 frames across the group, validates placement, and respects cast distance.
-Extra queens defend locally and rally toward base fronts. This is a bounded role foundation;
+Extra queens defend locally and rally toward base fronts. Injectors only defer base defense to healthy nearby extras. Armed structures, air-only threats to supply units, and special-attack units are recognized, and direct threats to a queen are considered even away from its base. This is a bounded role foundation;
 transfusion optimization and sophisticated multi-base reinforcement remain future work.
 
 ## Scouting and mutalisk assessment
 
 `scouting.py` records only currently visible enemy units and structures. It remembers up to
-eight observed mineral-line sites and 128 known anti-air threats, with explicit ages. One spare
+eight observed mineral-line sites and 128 known anti-air threats plus 64 counter-tech sightings, with explicit ages. One spare
 overlord scouts after 150 seconds with two resource bases, at least two overlords and eight spare
 supply. It retreats from observed anti-air or low HP; at most two confirmed scout losses are allowed.
 
 A positive mutalisk assessment requires all nine mineral-line coverage probes currently visible,
 two confirmations at least 112 frames apart, freshness within 448 frames, at least six visible
-workers, no remembered nearby anti-air or major mobile counter, a ground-defense reserve, two
+workers, no remembered nearby anti-air, major mobile counter or known counter-tech risk, a ground-defense reserve, two
 resource bases, 44 workers, and mineral/gas safety buffers of 600 each. Known defenses persist
 for 2688 frames unless their destruction is observed. Missing vision is unknown, never proof
-that defenses are absent. Coverage is sampled evidence, not exhaustive future safety.
+that defenses are absent. Known counter-tech blocks the recommendation without inventing completed enemy units. Cloaked defenses and enemy responses remain explicitly unknown even after visual coverage. Coverage is sampled evidence, not exhaustive future safety.
 
 The verdict is **advisory only**. No lair/spire/mutalisk spending or harassment orders are added
 in this phase. A candidate verdict proposes a future controlled test; it does not certify an

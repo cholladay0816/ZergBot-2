@@ -122,3 +122,12 @@ def test_scout_controller_ignores_fog_snapshots_and_records_unknown(tmp_path):
     assert not manager.sites and not manager.defenses
     assert recorder.events[-1]["verdict"] == "unknown_no_mineral_line"
     assert recorder.events[-1]["visible_workers"] is None
+
+
+def test_counter_tech_is_a_risk_without_inventing_completed_enemy_units():
+    site = observed()
+    assert verdict(site, counter_tech=True) == "blocked_counter_tech_unknown_production"
+    manager = ScoutManager(C)
+    manager.counter_tech[15] = 100
+    manager.destroyed(15)
+    assert not manager.counter_tech

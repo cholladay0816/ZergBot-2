@@ -18,6 +18,17 @@ TOWNHALLS = {
 }
 # API weapon tables omit some special attacks. Treat these as risks, not harmless.
 SPECIAL_AA = {U.BUNKER, U.WIDOWMINE, U.WIDOWMINEBURROWED, U.CARRIER, U.BATTLECRUISER, U.VOIDRAY}
+COUNTER_TECH = {
+    U.STARGATE,
+    U.FLEETBEACON,
+    U.SPIRE,
+    U.GREATERSPIRE,
+    U.INFESTATIONPIT,
+    U.HYDRALISKDEN,
+    U.TEMPLARARCHIVE,
+    U.FACTORY,
+}
+
 MOBILE_COUNTERS = {
     U.PHOENIX,
     U.THOR,
@@ -67,6 +78,7 @@ def assess_muta(
     threatened,
     local_aa,
     mobile_counter,
+    counter_tech=False,
 ):
     # A positive answer is a hypothesis for a future controlled transition, not an order.
     if site is None:
@@ -75,6 +87,8 @@ def assess_muta(
         return "unknown_stale_or_unseen"
     if not site.covered_now or site.confirmations < 2:
         return "unknown_incomplete_coverage"
+    if counter_tech:
+        return "blocked_counter_tech_unknown_production"
     if local_aa or mobile_counter:
         return "blocked_known_anti_air"
     if site.workers < 6:
@@ -96,6 +110,7 @@ class ScoutManager:
         self.config = config
         self.sites = {}  # at most 8 observed enemy townhall sites
         self.defenses = {}  # tag -> (frame, position, special mobile counter)
+        self.counter_tech = {}
         self.scout_tag = None
         self.losses = 0
         self.retreat_until = 0
@@ -104,6 +119,7 @@ class ScoutManager:
 
     def destroyed(self, tag):
         self.defenses.pop(tag, None)
+        self.counter_tech.pop(tag, None)
         if tag == self.scout_tag:
             self.scout_tag = None
             self.losses += 1
@@ -114,6 +130,8 @@ class ScoutManager:
         frame = bot.state.game_loop
         enemies = [u for u in list(bot.enemy_units) + list(bot.enemy_structures) if u.is_visible]
         for unit in enemies:
+            if unit.type_id in COUNTER_TECH:
+                self.counter_tech[unit.tag] = frame
             if unit.can_attack_air or unit.type_id in SPECIAL_AA:
                 self.defenses[unit.tag] = (
                     frame,
@@ -129,6 +147,15 @@ class ScoutManager:
             for tag, data in self.defenses.items()
             if frame - data[0] <= self.config.scout_defense_memory_frames
         }
+        self.counter_tech = {
+            tag: seen
+            for tag, seen in self.counter_tech.items()
+            if frame - seen <= self.config.scout_defense_memory_frames
+        }
+        if len(self.counter_tech) > 64:
+            self.counter_tech = dict(
+                sorted(self.counter_tech.items(), key=lambda item: item[1], reverse=True)[:64]
+            )
         if len(self.defenses) > 128:
             newest = sorted(self.defenses, key=lambda tag: self.defenses[tag][0], reverse=True)[
                 :128
@@ -179,6 +206,7 @@ class ScoutManager:
             threatened=threatened,
             local_aa=local,
             mobile_counter=mobile,
+            counter_tech=bool(self.counter_tech),
         )
         if bot.telemetry and (verdict != self.last_report or frame >= self.next_report):
             bot.telemetry.recorder.record(
@@ -195,6 +223,8 @@ class ScoutManager:
                 visible_workers=site.workers if site and site.covered_now else None,
                 remembered_local_aa=local,
                 remembered_mobile_counter=mobile,
+                remembered_counter_tech=bool(self.counter_tech),
+                uncertainty="unseen_cloaked_defenses_and_enemy_response_unknown",
                 scope="live_observation_memory_not_omniscience",
             )
             self.last_report, self.next_report = verdict, frame + 224
