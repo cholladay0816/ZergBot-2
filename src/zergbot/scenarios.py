@@ -29,6 +29,20 @@ def observed_order(order):
     )
 
 
+def cannon_candidates(pylon, home):
+    points = {
+        Point2(
+            (
+                round(pylon.x + math.cos(i * math.pi / 8) * radius),
+                round(pylon.y + math.sin(i * math.pi / 8) * radius),
+            )
+        )
+        for radius in (3, 5)
+        for i in range(16)
+    }
+    return sorted(points, key=lambda p: (p.distance_to(home), p.x, p.y))
+
+
 def approach_point(base, center, approach):
     point = base.towards(center, 16)
     return point + Point2((0, (approach - 1) * 6))
@@ -515,6 +529,23 @@ class Attacker(MeasuredBot):
         )
 
     async def cannon_step(self, home):
+        if self.sample_due("construction", self.state.game_loop, 112):
+            self.record(
+                "construction",
+                pylons=[float(u.build_progress) for u in self.structures(U.PYLON)],
+                cannons=[float(u.build_progress) for u in self.structures(U.PHOTONCANNON)],
+                cannon_state=[
+                    dict(
+                        tag=int(u.tag),
+                        position=list(u.position),
+                        ready=bool(u.is_ready),
+                        powered=bool(u.is_powered),
+                        own_cooldown=float(u.weapon_cooldown),
+                        engaged_target=int(u.engaged_target_tag) if u.engaged_target_tag else None,
+                    )
+                    for u in self.structures(U.PHOTONCANNON)
+                ],
+            )
         probes = self.units(U.PROBE)
         if not probes or self.state.game_loop < self.next_build:
             return
@@ -526,31 +557,30 @@ class Attacker(MeasuredBot):
                 max_distance=4,
                 random_alternative=False,
             )
+            self.next_build = self.state.game_loop + 112
             if place is not None:
                 probe.build(U.PYLON, place)
-                self.next_build = self.state.game_loop + 112
                 self.record("pylon_build_attempt", position=list(place))
         elif (
             self.structures(U.PYLON).ready
             and not self.structures(U.PHOTONCANNON)
             and not self.already_pending(U.PHOTONCANNON)
         ):
-            place = await self.find_placement(
-                U.PHOTONCANNON,
-                near=home.towards(self.game_info.map_center, 8),
-                max_distance=5,
-                random_alternative=False,
-            )
-            if place is not None:
-                probe.build(U.PHOTONCANNON, place)
-                self.next_build = self.state.game_loop + 112
-                self.record("cannon_build_attempt", position=list(place))
-        if self.sample_due("construction", self.state.game_loop, 112):
+            pylon = self.structures(U.PYLON).ready.closest_to(home)
+            points = cannon_candidates(pylon.position, home)
+            legal = await self.can_place(U.PHOTONCANNON, points)
+            choices = [p for p, valid in zip(points, legal, strict=True) if valid]
+            self.next_build = self.state.game_loop + 112
             self.record(
-                "construction",
-                pylons=[float(u.build_progress) for u in self.structures(U.PYLON)],
-                cannons=[float(u.build_progress) for u in self.structures(U.PHOTONCANNON)],
+                "cannon_placement_query",
+                pylon_position=list(pylon.position),
+                candidates=len(points),
+                legal_count=len(choices),
+                selected=list(choices[0]) if choices else None,
             )
+            if choices:
+                probe.build(U.PHOTONCANNON, choices[0])
+                self.record("cannon_build_attempt", position=list(choices[0]))
 
 
 def main():
