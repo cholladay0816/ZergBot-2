@@ -41,8 +41,10 @@ def test_assignments_survive_order_changes_and_prune_dead_bases_queens():
     assert manager.injectors == {10: 1, 20: 2}
     manager.assign(list(reversed(bases)), list(reversed(queens)))
     assert manager.injectors == {10: 1, 20: 2}
+    manager.recovering = {1, 3}
     manager.assign(bases[1:], queens[2:])
     assert manager.injectors == {20: 3}
+    assert manager.recovering == {3}
 
 
 def test_real_recorder_accepts_queen_decisions_and_counts_only_attempts(tmp_path):

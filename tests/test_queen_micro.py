@@ -46,3 +46,31 @@ def test_scripted_reaper_chooses_pathable_alternative_instead_of_leaving_attack_
     point = escape_point(Point2((0, 0)), Point2((3, 0)), lambda p: p.y >= 0 and p.x >= 0)
     assert point is not None and point.y > 0
     assert escape_point(Point2((0, 0)), Point2((3, 0)), lambda p: False) is None
+
+
+def test_recovery_hysteresis_prevents_low_health_reengagement():
+    from zergbot.queen_micro import recovery_active
+
+    assert recovery_active(False, 0.29, True)
+    assert recovery_active(True, 0.31, True)
+    assert recovery_active(True, 0.5, False)
+    assert not recovery_active(True, 0.6, True)
+    assert not recovery_active(False, 0.2, False)
+
+
+def test_recovery_uses_enemy_range_beyond_old_seven_unit_radius():
+    from zergbot.queen_micro import recovery_motion
+
+    pos, protected, enemy = Point2((8, 0)), Point2((15, 0)), Point2((0, 0))
+    point = recovery_motion(pos, protected, protected, [(enemy, 8.5)], lambda p: True)
+    assert point == protected
+    assert point.distance_to(enemy) >= 10
+    assert recovery_motion(pos, protected, protected, [(enemy, 8.5)], lambda p: False) == pos
+
+
+def test_recovery_does_not_choose_worker_pocket_inside_visible_cannon_range():
+    from zergbot.queen_micro import recovery_motion
+
+    pos, pocket, enemy = Point2((8, 0)), Point2((2, 0)), Point2((0, 0))
+    point = recovery_motion(pos, pocket, Point2((12, 0)), [(enemy, 8.5)], lambda p: True)
+    assert point.distance_to(enemy) >= 10

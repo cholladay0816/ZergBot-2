@@ -143,7 +143,10 @@ class MeasuredBot(BotAI):
 class Defender(MeasuredBot):
     def __init__(self, options, output):
         super().__init__(options, output)
-        self.config = BotConfig(queen_tactical_micro=options.controller == "micro")
+        self.config = BotConfig(
+            queen_tactical_micro=options.controller == "micro",
+            queen_recovery=options.queen_recovery,
+        )
         self.manager = QueenManager(self.config)
         self.telemetry = None
         self.worker_tags = set()
@@ -593,6 +596,7 @@ def main():
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--worker-safety", action="store_true")
     parser.add_argument("--worker-defense-seconds", type=int, default=10)
+    parser.add_argument("--queen-recovery", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.worker_defense_seconds <= 60:
         parser.error("worker defense duration must be 1-60 game seconds")

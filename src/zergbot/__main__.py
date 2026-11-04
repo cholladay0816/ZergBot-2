@@ -101,6 +101,9 @@ def main() -> None:
     parser.add_argument(
         "--opening-supply", action=argparse.BooleanOptionalAction, default=defaults.opening_supply
     )
+    parser.add_argument(
+        "--queen-recovery", action=argparse.BooleanOptionalAction, default=defaults.queen_recovery
+    )
     args = parser.parse_args()
     if not 0 <= args.seed < 2**32:
         parser.error("Seed must be in [0, 2**32)")
@@ -134,6 +137,7 @@ def main() -> None:
             opening_supply=args.opening_supply,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
+            queen_recovery=args.queen_recovery,
             tech_min_workers=args.tech_min_workers,
             avoid_detected_burrow=args.avoid_detected_burrow,
         )

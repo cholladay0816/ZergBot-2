@@ -4,7 +4,7 @@ from sc2.ids.ability_id import AbilityId as A
 from sc2.ids.buff_id import BuffId
 from sc2.ids.unit_typeid import UnitTypeId as U
 
-from .queen_micro import defend_motion, grenade_escape
+from .queen_micro import defend_motion, grenade_escape, recovery_active, recovery_motion
 
 
 def queen_priority(
@@ -38,10 +38,12 @@ class QueenManager:
         self.injectors = {}  # base tag -> queen tag; stable until either disappears
         self.next_creep_frame = 0
         self.last_decisions = {}
+        self.recovering = set()
 
     def assign(self, bases, queens):
         live_bases = {b.tag for b in bases}
         live_queens = {q.tag for q in queens}
+        self.recovering.intersection_update(live_queens)
         self.injectors = {
             b: q for b, q in self.injectors.items() if b in live_bases and q in live_queens
         }
@@ -113,6 +115,27 @@ class QueenManager:
                     enemy.can_attack_air if queen.is_flying else ground_threat(enemy)
                 )
             )
+            if self.config.queen_recovery:
+                recovering = recovery_active(
+                    queen.tag in self.recovering, queen.health_percentage, bool(direct or threats)
+                )
+                if recovering:
+                    self.recovering.add(queen.tag)
+                else:
+                    self.recovering.discard(queen.tag)
+                if recovering and (direct or threats):
+                    workers = bot.workers.closer_than(12, base)
+                    protected = workers.center if workers else base.position
+                    hazards = [
+                        (u.position, u.ground_range + u.radius + queen.radius)
+                        for u in (direct | threats)
+                    ]
+                    target = recovery_motion(
+                        queen.position, protected, base.position, hazards, bot.in_pathing_grid
+                    )
+                    queen.move(target)
+                    self.event(bot, queen, "recovery", role, target)
+                    continue
             # Dedicated inject queens respond locally; extras intercept base threats.
             nearby_extras = [
                 q for q in extras if q.health_percentage >= 0.3 and q.distance_to(base) < 20
