@@ -136,7 +136,7 @@ Partial replay passes retain their own failure/timeout artifacts.
 
 ## Validation and remaining work
 
-The November 4, 2026 checkpoint passed **209 offline tests**, lint/format checks,
+The November 4, 2026 checkpoint passed **214 offline tests**, lint/format checks,
 compilation, dependency checks and wheel validation. Tests cover pure decisions,
 morph continuity/timeouts, capability fallbacks, command arbitration, real SC2 command
 construction, economy priorities, diagnostic bounds/privacy, replay provenance, CLI

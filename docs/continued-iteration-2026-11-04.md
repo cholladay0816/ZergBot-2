@@ -433,3 +433,47 @@ Local index: `.local-matches/phase4-worker-participation-comparisons.json`.
 - `scenario-20261104T215136Z-lings-micro1`: defender SHA-256 `4de875ab10486d65f3a9c54198e138c074c875e4b7e5f879292c7f9aadfe731a`.
 - `scenario-20261104T215207Z-lings-micro2`: defender SHA-256 `b014a731fa73944227bed4f5a4bd1b5525661070b4cf194e080d2cf624093f89`.
 - `scenario-20261104T215237Z-lings-micro2`: defender SHA-256 `d0126e5310f44b45c0bbe855425e94880e58a29e118a91486a37e2be2a236898`.
+
+
+## Bounded Pool / first-queen readiness probe
+
+Initial checkpoint `541bd81` failed live because the recorder allowlist rejected the new
+construction event. `20261104T215539Z-7915ea8d` is retained as a software failure, not a
+game defeat. Fixed `c816d95` registers the explicit event fields and tests them through
+the real recorder and JSON serialization instead of only a mock. All six corrected runs
+completed their 360-second caps; no full-match win or early-rush survival claim follows.
+
+Both sides use the same frozen source, opening-supply, hatch-first, adaptive-army and
+roach-tech. Only the candidate adds opening-readiness. Each stage can hold spending for
+at most 20 game seconds; the Pool cannot begin a reservation after 120 seconds and the
+first-queen stage closes after 250 seconds. Actual pending/observed construction or queen
+production closes its stage. Supply and emergency production retain earlier priority.
+
+The [SpawningTool parser](https://github.com/StoicLoofah/spawningtool/blob/master/spawningtool/parser.py)
+subtracts build duration from unit-born events to estimate production starts. Its 1:59
+queen entry is not a 1:59 completion. Our command submission is likewise not proof of an
+accepted production start: the table separately gives first sampled active queen order
+and observed queen appearance/completion. Snapshot timing is a five-second upper bound.
+
+| Case | Pool observed start / complete | Queen submission / first order sample / completion | Workers 4 / 6 min |
+|---|---|---|---|
+| Terran-control | 86.964 / 133.393 | 133.571 / 135.000 / 169.286 | 32 / 44 |
+| Terran-candidate | 85.357 / 131.786 | 131.786 / 135.000 / 167.500 | 28 / 44 |
+| Protoss-control | 86.786 / 133.214 | 133.393 / 135.000 / 169.107 | 32 / 44 |
+| Protoss-candidate | 85.893 / 132.321 | 132.321 / 135.000 / 168.036 | 30 / 44 |
+| Zerg-control | 87.321 / 133.750 | 133.929 / 135.000 / 169.643 | 34 / 44 |
+| Zerg-candidate | 85.714 / 132.143 | 132.143 / 135.000 / 167.857 | 28 / 44 |
+
+Queen completion improves by only 1.1-1.8 seconds while four-minute workers fall by 2-6;
+six-minute workers are unchanged. The first queen was already submitted immediately
+after Pool readiness in the control. This evidence does not support enabling the reserve.
+It remains off, with no claim of improved opening-rush survival. The stronger hatch-first
+opening itself still needs a dedicated early-rush safety comparison; isolated queen/unit
+scenarios do not substitute for that full opening test.
+Local index: `.local-matches/phase4-opening-readiness-comparisons.json`.
+- `20261104T215728Z-92be8529`: SHA-256 `c6823b62a8ed75ad71e4ec5a91ee493b4780e95a4a9efb9039703baa2c260a19`.
+- `20261104T215824Z-5f2a7477`: SHA-256 `674f2b0a71a460ed952360b0c6f41e96a15f2c0459a73199613df66e0b5ecc73`.
+- `20261104T215921Z-6801d144`: SHA-256 `738960f68f597db8fb53433580d67155af340aa54be5c56b221eb03ba81b785d`.
+- `20261104T220017Z-5f234a4a`: SHA-256 `e2d9cddc49b7ee0ecb130bdeb83bc669fae38fca4b454bfb5531ab758f1b9912`.
+- `20261104T220114Z-db650949`: SHA-256 `21ef0be404cd48512bbd89417191b77e3f376a6e0b17c5d8b19cee3327feae9e`.
+- `20261104T220211Z-e796638d`: SHA-256 `97f2490d41b8aa324baecb87f454ae41025ebf1ea74f4aee7920beb4a05cd28c`.
