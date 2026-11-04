@@ -19,6 +19,7 @@ from sc2.position import Point2
 from .config import BotConfig
 from .queens import QueenManager
 from .tank_micro import split_waypoint
+from .worker_safety import worker_action
 
 
 def approach_point(base, center, approach):
@@ -48,6 +49,8 @@ class MeasuredBot(BotAI):
         self.last_alive = {}
         self.termination = "incomplete"
         self.next_samples = {}
+        self.worker_defense_start = None
+        self.worker_defenders = set()
 
     def sample_due(self, key, frame, interval):
         if frame < self.next_samples.get(key, 0):
@@ -186,7 +189,12 @@ class Defender(MeasuredBot):
                 queen.weapon_cooldown > 0 and queen.distance_to(previous) > 0.05
             )
             self.previous_positions[queen.tag] = queen.position
+        handled = set()
+        if self.options.worker_safety:
+            handled = self.protect_workers()
         for worker in self.workers.idle:
+            if worker.tag in handled:
+                continue
             minerals = self.mineral_field.closer_than(12, self.start_location)
             if minerals:
                 worker.gather(minerals.closest_to(worker))
@@ -235,6 +243,51 @@ class Defender(MeasuredBot):
             )
         self.counts["workers_lost"] = len(self.worker_tags - {u.tag for u in self.workers})
         self.end_frame()
+
+    def protect_workers(self):
+        threats = self.enemy_units.filter(
+            lambda u: not u.is_flying and u.can_attack_ground
+        ).closer_than(12, self.start_location)
+        minerals = self.mineral_field.closer_than(12, self.start_location)
+        if not threats or not minerals:
+            for worker in self.workers:
+                if worker.tag in self.worker_defenders and minerals:
+                    worker.gather(minerals.closest_to(worker))
+            self.worker_defenders.clear()
+            self.worker_defense_start = None
+            return set()
+        if self.worker_defense_start is None:
+            self.worker_defense_start = self.state.game_loop
+        selected = {
+            w.tag
+            for w in sorted(
+                self.workers,
+                key=lambda w: (-w.health_percentage, w.distance_to(threats.closest_to(w))),
+            )[:6]
+        }
+        handled = set()
+        for worker in self.workers:
+            threat = threats.closest_to(worker)
+            action = worker_action(
+                worker.health_percentage,
+                worker.distance_to(threat),
+                worker.tag in selected,
+                self.state.game_loop - self.worker_defense_start,
+            )
+            if action == "evacuate":
+                safe = max(minerals, key=lambda m: min(m.distance_to(t) for t in threats))
+                worker.gather(safe)
+            elif action == "defend":
+                local = threats.closer_than(4, worker)
+                worker.attack(min(local, key=lambda t: t.health))
+            elif worker.tag in self.worker_defenders:
+                worker.gather(minerals.closest_to(worker))
+            else:
+                continue
+            handled.add(worker.tag)
+            self.counts["worker_" + action + "_commands"] += 1
+        self.worker_defenders = handled
+        return handled
 
     def tank_defense(self):
         army = list(self.units.of_type({U.ZERGLING, U.BANELING}))
@@ -481,6 +534,7 @@ def main():
     parser.add_argument("--scenario", choices=["reaper", "lings", "cannon", "tank"], required=True)
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
+    parser.add_argument("--worker-safety", action="store_true")
     args = parser.parse_args()
     output = Path(".local-matches") / (
         "scenario-"
