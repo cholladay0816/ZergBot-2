@@ -477,3 +477,43 @@ Local index: `.local-matches/phase4-opening-readiness-comparisons.json`.
 - `20261104T220017Z-5f234a4a`: SHA-256 `e2d9cddc49b7ee0ecb130bdeb83bc669fae38fca4b454bfb5531ab758f1b9912`.
 - `20261104T220114Z-db650949`: SHA-256 `21ef0be404cd48512bbd89417191b77e3f376a6e0b17c5d8b19cee3327feae9e`.
 - `20261104T220211Z-e796638d`: SHA-256 `97f2490d41b8aa324baecb87f454ae41025ebf1ea74f4aee7920beb4a05cd28c`.
+
+
+## Defensive Hellion mineral-line pressure
+
+Frozen `2a58ff6a64f4814ecd5dce1e472ccf4ccb9fd772`, two actual Hellions versus one queen
+and twelve mining workers. Three identical-start approach pairs, seeds 1/2/3, normal fog,
+step 4, 90-second cap. Hellions start outside the worker line and traverse a path-queried
+waypoint; none is spawned behind workers. The attacker uses own cooldown, visible worker
+alignment/health, queen-aware movement between attacks and critical-health withdrawal.
+The alignment score is a heuristic, not an engine splash forecast. A pathing distance
+does not guarantee a collision-free route. No repair support is provided to the attacker.
+
+| Approach | Queen policy | Workers lost | Worker HP loss observed | Final minerals | Hellions alive | Worker attack opportunities sampled | Weapon-cycle resets | Multi-worker damage frames |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 0 | baseline | 2 | 69.8 | 865 | 1 | 33 | 7 | 0 |
+| 0 | micro | 3 | 125.6 | 800 | 2 | 19 | 10 | 1 |
+| 1 | baseline | 4 | 237.3 | 710 | 2 | 106 | 12 | 4 |
+| 1 | micro | 1 | 195.3 | 945 | 2 | 64 | 9 | 3 |
+| 2 | baseline | 1 | 69.7 | 950 | 0 | 15 | 5 | 0 |
+| 2 | micro | 2 | 111.6 | 875 | 2 | 15 | 9 | 1 |
+
+All queens survive and both players record zero conflicting-unit frames. Every run has
+actual worker-access opportunities, observed damage and weapon-cycle resets, so pressure
+is exercised rather than credited to an inaccessible setup. Simultaneous worker damage
+is splash-correlated evidence, not exact attribution to either Hellion or a particular
+shot. Fatal-frame damage may be absent from the HP-loss callback, so HP loss is incomplete.
+Final mineral bank is a collection proxy, not exact lost mining time.
+
+Micro loses 3/1/2 workers versus baseline 2/4/1: one approach improves, two regress. The
+micro queen kills fewer Hellions in two approaches. No universal micro improvement or
+default promotion follows. These isolated arrival/defense tests do not validate an actual
+Terran rush build or our full opening's survival. The offensive ling diversion scenario
+is distinct and still pending.
+Local index: `.local-matches/phase4-hellion-defense-comparisons.json`.
+- `scenario-20261104T220647Z-hellion-baseline0`: defender SHA-256 `df69c46aca1eb66add527b5f5d7111cb9e834f7d49d412728a6edeb1ff2b6197`; cooldown movement samples 53; max estimated alignment 2; detail cap reached False.
+- `scenario-20261104T220717Z-hellion-micro0`: defender SHA-256 `23eea21e784044e3b6fd61ae65843afc045b14fe31c42534bf769a833ab37d83`; cooldown movement samples 76; max estimated alignment 1; detail cap reached False.
+- `scenario-20261104T220747Z-hellion-baseline1`: defender SHA-256 `27cb513336ee3d189028d3adb73fefdc001aee5b86c8010563c7363d9c6475a5`; cooldown movement samples 60; max estimated alignment 6; detail cap reached False.
+- `scenario-20261104T220818Z-hellion-micro1`: defender SHA-256 `983876290d4a1874515c494debdf0b98f412db7546f5e66f4ca6985b9bd98703`; cooldown movement samples 52; max estimated alignment 2; detail cap reached False.
+- `scenario-20261104T220848Z-hellion-baseline2`: defender SHA-256 `c4be382c137a749a7099a1f433093d09119e6aec2a8531ec4a0f6ef085760e2b`; cooldown movement samples 36; max estimated alignment 1; detail cap reached False.
+- `scenario-20261104T220919Z-hellion-micro2`: defender SHA-256 `4dbc952dd3d753252e58d9f1de9ccad1ed500fa62d361ae26c8619e7cb4aa51c`; cooldown movement samples 76; max estimated alignment 1; detail cap reached False.

@@ -7,7 +7,7 @@ requested experiments, not completed validation or claims of optimal micro.
 |---|---|---|
 | Pool / first-queen budget | Fixed c816d95 probes complete; timing gain too small with worker regression, stays off | Pool construction start/completion, queen production submission/completion, workers, then a separately controlled opening-rush survival check |
 | Offensive ling diversion versus Hellions | Queued | Identical initial counts/upgrades/health/positions for grouped and split policies; actual flank traversal to observed workers; Hellions independently protect workers and select useful line-splash targets; worker damage/kills, ling losses, path progress, fallback |
-| Defensive Hellion mineral-line rush | Frozen 2a58ff6 live pairs running; distinct from offensive case | Real worker access under varied approaches, queen protection and worker spacing, worker survival/HP/mineral collection, actual attacker survival; no exact splash attribution from HP loss alone |
+| Defensive Hellion mineral-line rush | Six 2a58ff6 pairs completed with meaningful attacks and mixed queen results; micro remains off | Real worker access under varied approaches, queen protection and worker spacing, worker survival/HP/mineral collection, actual attacker survival; no exact splash attribution from HP loss alone |
 | Adept shade harassment | Queued | Actual cast, owned shade movement, cancel/feint and expiry/commit trials; defender sees only normal visible shade/unit evidence; verified transfer, worker/queen outcomes and mining impact |
 
 The first queen's 169-second observation was completion. SpawningTool's
