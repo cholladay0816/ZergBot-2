@@ -160,9 +160,11 @@ and compare multiple runs before drawing causal conclusions from win/loss result
 .\.venv\Scripts\python.exe -m zergbot.replay_analysis .local-matches\MATCH-ID\match.SC2Replay
 ```
 
-This launches the installed matching SC2 build for two sequential, fog-disabled,
-post-game observation passes. Outputs are `replay-perspective-1.json`,
-`replay-perspective-2.json` and `replay-analysis-report.md` beside the replay.
+This launches the installed matching SC2 build for two sequential player-perspective
+post-game passes. Fog disabling is requested, but raw enemy entries can remain
+visibility-limited. Outputs are `replay-perspective-1.json`,
+`replay-perspective-2.json`, `replay-combined.json` and `replay-analysis-report.md`
+beside the replay. The combined file joins each player's own evidence by exact frame.
 Each player's economy/private orders are obtained in their own perspective, not
 invented from enemy protocol defaults. Unit details, effects, upgrades and sampled
 actions remain bounded (112-frame default step, 1,000 samples per pass, 192 detailed
@@ -201,7 +203,7 @@ Inject attempts and expansion decisions are included in diagnostics.
 Experiment protocol: compare unchanged commit `624e407` with the candidate on
 AbyssalReefLE, Hard Terran, seeds 1/2/3, four-frame steps, `realtime=False`, a
 600-game-second cap and 180-wall-second cap. Runs are sequential, below-normal
-priority on logical CPUs 20–23, with system CPU/memory contention monitoring.
+priority on logical CPUs 20â€“23, with system CPU/memory contention monitoring.
 Primary metrics fixed before candidate runs: roaches at 240/360 seconds, sampled
 larva availability, mineral accumulation, supply blocking and outcome/survival.
 Also inspect inject attempts, morph confirmations and action errors. This bundled
@@ -228,7 +230,7 @@ three ready bases, accounts for pending overlords, and never queues redundant
 supply beyond the 200 cap. Only the supply policy changes in this wave. Compare
 seeds 1/2/3 against `dbdba87`, now with a 1,200-game-second/300-wall-second cap so
 the earlier ten-minute censored outcomes can develop. Primary metric is blocked-
-supply sample fraction from 120–360 seconds; also track army, minerals and outcomes.
+supply sample fraction from 120â€“360 seconds; also track army, minerals and outcomes.
 
 
 Reproducibility correction: the earlier exploratory runs set SC2's game seed but
@@ -282,3 +284,14 @@ burrow. It does not infer a detector, caster or attacker from that HP loss. Miss
 emerge capability waits safely, and legitimate morphs retain their transition
 guard. Compare outcomes and buried losses against the preceding retained policy;
 escaping can itself expose a unit to more damage, so this remains experimental.
+
+
+Replay visibility validation: on SC2 5.0.17, requesting `disable_fog=True` did not
+make enemy raw-unit entries omniscient in a player-perspective pass. Do not treat
+an empty enemy list as an empty enemy army. The replay analyzer now joins each
+player's own observations at identical frames into `replay-combined.json`, with
+replay SHA-256/build/step validation. This provides both private economies, full own
+counts and capped own unit/order details without feeding them to the live bot.
+Missing player frames remain null. Older artifacts' `opponent_counts_fog_disabled`
+field means returned visible enemies despite its misleading old name; schema 2
+renames it `visible_opponent_counts`. Neither view establishes exact damage causes.

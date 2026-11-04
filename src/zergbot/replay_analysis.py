@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import hashlib
 import json
 import time
 from collections import Counter
@@ -17,7 +18,8 @@ from .telemetry import field
 
 def unit_name(value):
     try:
-        return UnitTypeId(value).name
+        member = UnitTypeId(value)
+        return member.name if member.value == value else f"UNKNOWN_TYPE_{value}"
     except ValueError:
         return f"UNKNOWN_TYPE_{value}"
 
@@ -73,7 +75,7 @@ def replay_snapshot(response, perspective, cap=192):
             ]
         },
         "own_counts": dict(Counter(unit_name(u.unit_type) for u in units if u.alliance == 1)),
-        "opponent_counts_fog_disabled": dict(
+        "visible_opponent_counts": dict(
             Counter(unit_name(u.unit_type) for u in units if u.alliance == 4)
         ),
         "own_upgrade_ids": list(observation.raw_data.player.upgrade_ids),
@@ -104,8 +106,10 @@ def replay_snapshot(response, perspective, cap=192):
 async def perspective_pass(replay, perspective, step_frames, max_samples):
     base_build, data_version = get_replay_version(replay)
     payload = {
-        "schema_version": 1,
-        "scope": "postgame_replay_fog_disabled",
+        "schema_version": 2,
+        "scope": "postgame_player_perspective",
+        "disable_fog_requested": True,
+        "replay_sha256": hashlib.sha256(replay.read_bytes()).hexdigest(),
         "perspective": perspective,
         "base_build": base_build,
         "data_version": data_version,
@@ -156,8 +160,10 @@ def comparative_report(directory, passes):
     lines = [
         "# Post-game replay analysis",
         "",
-        "These are separate fog-disabled replay observations, never live bot inputs. "
-        "Each player's private economy/orders are read in that player's own perspective. "
+        "These are separate player-perspective replay observations, never live bot inputs. "
+        "Disabling fog was requested, but the tested SC2 raw API still limited enemy entries "
+        "to visibility. Each player's private economy/orders and full own counts are read "
+        "in that player's own perspective; paired own observations provide the fuller view. "
         "Missing fields remain unknown. Sampling is not a complete spell/action log, and "
         "this does not establish exact damage causation. Unit z-position is not terrain height.",
         "",
@@ -213,6 +219,9 @@ def main():
                 await perspective_pass(replay, player, args.step_frames, args.max_samples)
             )
         comparative_report(replay.parent, passes)
+        from .replay_combined import write_combined
+
+        write_combined(replay.parent, passes)
 
     asyncio.run(asyncio.wait_for(run(), timeout=args.wall_timeout))
     print(replay.parent / "replay-analysis-report.md")

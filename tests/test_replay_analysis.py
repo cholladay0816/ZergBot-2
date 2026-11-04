@@ -44,3 +44,9 @@ def test_replay_unit_details_are_capped_but_counts_are_complete():
     assert len(sample["units"]) == 2
     assert sample["units_omitted"] == 8
     assert sample["own_counts"] == {"MARINE": 10}
+
+
+def test_unknown_replay_unit_type_remains_unknown():
+    from zergbot.replay_analysis import unit_name
+
+    assert unit_name(999999) == "UNKNOWN_TYPE_999999"
