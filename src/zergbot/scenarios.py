@@ -18,6 +18,7 @@ from sc2.position import Point2
 
 from .config import BotConfig
 from .queens import QueenManager
+from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
 from .tank_micro import split_waypoint
 from .worker_safety import worker_action
 
@@ -160,6 +161,15 @@ class Defender(MeasuredBot):
         base = self.start_location
         queen = base.towards(self.game_info.map_center, 5)
         attack = approach_point(base, self.game_info.map_center, self.options.approach)
+        if self.options.scenario == "reaper" and self.options.ingress == "minerals":
+            patches = self.mineral_field.closer_than(12, base)
+            attack = (
+                mineral_ingress(base, patches.center, self.options.approach, self.in_pathing_grid)
+                if patches
+                else None
+            )
+            if attack is None:
+                raise ValueError("No valid mineral-side Reaper setup point")
         if not self.in_pathing_grid(attack):
             attack = base.towards(self.game_info.map_center, 16)
         commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
@@ -479,15 +489,25 @@ class Attacker(MeasuredBot):
             available = (await self.get_available_abilities([reaper]))[0]
             grenade_target = queen or target
             prediction = None
-            if grenade_target is not None:
-                prediction = grenade_target.position
-                old = self.previous_enemy.get(grenade_target.tag)
-                if old and self.state.game_loop > old[1]:
-                    velocity = (grenade_target.position - old[0]) * (
-                        22.4 / (self.state.game_loop - old[1])
+            coverage = None
+            candidates = [grenade_target] if grenade_target is not None else []
+            if self.options.grenade_policy == "opportunity":
+                candidates = workers + queens
+            choices = []
+            for candidate in candidates:
+                old = self.previous_enemy.get(candidate.tag)
+                point = predict_visible_position(
+                    candidate.position,
+                    old[0] if old else None,
+                    self.state.game_loop - old[1] if old else 0,
+                )
+                if reaper.in_ability_cast_range(A.KD8CHARGE_KD8CHARGE, point):
+                    score = grenade_score(
+                        point, [w.position for w in workers], [q.position for q in queens]
                     )
-                    if velocity.length > 0:
-                        prediction += velocity.normalized * min(2, velocity.length * 0.5)
+                    choices.append((score[0], -reaper.distance_to(point), candidate, point, score))
+            if choices:
+                _, _, grenade_target, prediction, coverage = max(choices, key=lambda x: x[:2])
             if (
                 A.KD8CHARGE_KD8CHARGE in available
                 and prediction is not None
@@ -501,6 +521,9 @@ class Attacker(MeasuredBot):
                     observed_target=list(grenade_target.position),
                     predicted_target=list(prediction),
                     prediction_horizon_seconds=0.5,
+                    target_type=grenade_target.type_id.name,
+                    estimated_visible_worker_coverage=coverage[1] if coverage else None,
+                    estimated_visible_queen_coverage=coverage[2] if coverage else None,
                 )
                 reason = "grenade"
             elif reaper.weapon_cooldown > 0 and queen is not None and reaper.distance_to(queen) < 9:
@@ -597,6 +620,10 @@ def main():
     parser.add_argument("--worker-safety", action="store_true")
     parser.add_argument("--worker-defense-seconds", type=int, default=10)
     parser.add_argument("--queen-recovery", action="store_true")
+    parser.add_argument("--ingress", choices=["frontal", "minerals"], default="frontal")
+    parser.add_argument(
+        "--grenade-policy", choices=["queen-first", "opportunity"], default="queen-first"
+    )
     args = parser.parse_args()
     if not 1 <= args.worker_defense_seconds <= 60:
         parser.error("worker defense duration must be 1-60 game seconds")
