@@ -19,6 +19,7 @@ from sc2.main import run_game
 from sc2.player import Bot
 from sc2.position import Point2
 
+from .adept_micro import AdeptHarass
 from .config import BotConfig
 from .harass_micro import HellionHarass, validate_harass_event
 from .queens import QueenManager
@@ -104,7 +105,7 @@ class MeasuredBot(BotAI):
     def do(self, action, *args, **kwargs):
         if hasattr(action, "unit"):
             self.commands[action.unit.tag] += 1
-            if action.unit.type_id in {U.QUEEN, U.REAPER, U.HELLION}:
+            if action.unit.type_id in {U.QUEEN, U.REAPER, U.HELLION, U.ADEPT, U.ADEPTPHASESHIFT}:
                 self.record(
                     "own_command",
                     unit_type=action.unit.type_id.name,
@@ -195,6 +196,8 @@ class Defender(MeasuredBot):
             commands.append((U.REAPER, 1, attack, 2))
         elif self.options.scenario == "hellion":
             commands.append((U.HELLION, 2, attack, 2))
+        elif self.options.scenario == "adept":
+            commands.append((U.ADEPT, 1, attack, 2))
         elif self.options.scenario == "tank":
             commands.extend(
                 [
@@ -427,6 +430,7 @@ class Attacker(MeasuredBot):
         super().__init__(options, output, setup_barrier)
         self.retreating = False
         self.hellion_controller = HellionHarass()
+        self.adept_controller = AdeptHarass(options.adept_mode)
         self.previous_enemy = {}
         self.next_build = 0
 
@@ -445,6 +449,15 @@ class Attacker(MeasuredBot):
         if self.options.scenario == "reaper":
             for reaper in self.units(U.REAPER):
                 await self.reaper_step(reaper, workers, queens, home)
+        elif self.options.scenario == "adept":
+            await self.adept_controller.step(
+                self,
+                list(self.units(U.ADEPT)),
+                list(self.units(U.ADEPTPHASESHIFT)),
+                workers,
+                queens,
+                home,
+            )
         elif self.options.scenario == "hellion":
             await self.hellion_controller.step(
                 self, list(self.units(U.HELLION)), workers, queens, home, self.options.approach
@@ -648,10 +661,13 @@ def main():
     parser.add_argument("--game-time-limit", type=int, default=90)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
-        "--scenario", choices=["reaper", "lings", "cannon", "tank", "hellion"], required=True
+        "--scenario",
+        choices=["reaper", "lings", "cannon", "tank", "hellion", "adept"],
+        required=True,
     )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
+    parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
     parser.add_argument("--worker-safety", action="store_true")
     parser.add_argument("--worker-defense-count", type=int, choices=range(1, 13), default=6)
     parser.add_argument("--worker-defense-seconds", type=int, default=10)
@@ -699,7 +715,7 @@ def main():
                 Bot(Race.Zerg, defender),
                 Bot(
                     Race.Protoss
-                    if args.scenario == "cannon"
+                    if args.scenario in {"cannon", "adept"}
                     else Race.Zerg
                     if args.scenario == "lings"
                     else Race.Terran,
