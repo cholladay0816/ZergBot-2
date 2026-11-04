@@ -66,7 +66,8 @@ class RoachAgent:
         # Losing observed HP while already hidden proves hiding is not currently
         # safe, without guessing whether detection, splash or a spell caused it.
         if (
-            obs.burrowed
+            config.burrow_escape_frames > 0
+            and obs.burrowed
             and self.previous_burrowed
             and self.previous_health is not None
             and obs.health < self.previous_health - 1e-6

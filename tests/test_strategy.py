@@ -2,7 +2,7 @@ from zergbot.agents import Action, CommandArbiter, Intent, Observation
 from zergbot.config import BotConfig
 from zergbot.strategy import ArmyStrategy
 
-C = BotConfig()
+C = BotConfig(worker_defenders=2)
 
 
 def roster(count=15):
@@ -99,3 +99,31 @@ def test_invalid_regroup_threshold_rejected():
 
     with pytest.raises(ValueError, match="Regroup"):
         BotConfig(regroup_roaches=12)
+
+
+def test_disabled_squad_clears_assignments():
+    strategy = ArmyStrategy()
+    strategy.defenders = {1, 2}
+    orders = strategy.orders(
+        roster(),
+        False,
+        BotConfig(worker_defenders=0),
+        worker_target=(0, 0),
+        positions={i: (i, 0) for i in range(15)},
+    )
+    assert not strategy.defenders
+    assert all(o.reason == "army_objective" for o in orders)
+
+
+def test_regroup_eleven_restores_original_twelve_unit_trigger():
+    strategy = ArmyStrategy()
+    config = BotConfig(regroup_roaches=11, worker_defenders=0)
+    for count, threatened, expected in [
+        (11, False, Action.RETREAT),
+        (12, False, Action.ATTACK),
+        (11, False, Action.RETREAT),
+        (13, False, Action.ATTACK),
+        (3, True, Action.ATTACK),
+        (3, False, Action.RETREAT),
+    ]:
+        assert all(o.action is expected for o in strategy.orders(roster(count), threatened, config))

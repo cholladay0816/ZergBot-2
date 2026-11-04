@@ -7,6 +7,9 @@ from uuid import uuid4
 
 
 def main() -> None:
+    from .config import BotConfig
+
+    defaults = BotConfig()
     parser = argparse.ArgumentParser(
         description="Autonomous roach bot (requires local SC2 and map)"
     )
@@ -19,6 +22,24 @@ def main() -> None:
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
+        "--worker-defenders",
+        type=int,
+        default=defaults.worker_defenders,
+        help="Experimental worker-defense squad; 0 disables",
+    )
+    parser.add_argument(
+        "--regroup-roaches",
+        type=int,
+        default=defaults.regroup_roaches,
+        help="Healthy-roach regroup threshold; 11 restores the old 12-unit trigger",
+    )
+    parser.add_argument(
+        "--burrow-escape-frames",
+        type=int,
+        default=defaults.burrow_escape_frames,
+        help="Experimental escape after damage while hidden; 0 disables",
+    )
+    parser.add_argument(
         "--game-time-limit", type=int, default=None, help="Game seconds; bounded test"
     )
     parser.add_argument("--diagnostics-dir", type=Path, default=Path(".local-matches"))
@@ -30,13 +51,21 @@ def main() -> None:
         parser.error("Seed must be in [0, 2**32)")
     if args.game_time_limit is not None and args.game_time_limit <= 0:
         parser.error("Game time limit must be positive")
+    try:
+        config = BotConfig(
+            random_seed=args.seed,
+            worker_defenders=args.worker_defenders,
+            regroup_roaches=args.regroup_roaches,
+            burrow_escape_frames=args.burrow_escape_frames,
+        )
+    except ValueError as error:
+        parser.error(str(error))
     from sc2 import maps
     from sc2.data import Difficulty, Race
     from sc2.main import run_game
     from sc2.player import Bot, Computer
 
     from .bot import ZergBot
-    from .config import BotConfig
     from .diagnostics import DiagnosticConfig, MatchDiagnostics
 
     directory = args.diagnostics_dir / (
@@ -72,7 +101,7 @@ def main() -> None:
             [
                 Bot(
                     Race.Zerg,
-                    ZergBot(config=BotConfig(random_seed=args.seed), diagnostics=recorder),
+                    ZergBot(config=config, diagnostics=recorder),
                 ),
                 Computer(Race.Terran, Difficulty[args.difficulty]),
             ],

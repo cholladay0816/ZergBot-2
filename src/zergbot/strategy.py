@@ -31,7 +31,7 @@ class ArmyStrategy:
             and u.tag in positions
             and dist(positions[u.tag], worker_target) <= 35
         }
-        if under_attack or worker_target is None:
+        if under_attack or worker_target is None or config.worker_defenders == 0:
             self.defenders.clear()
         else:
             self.defenders.intersection_update(eligible)

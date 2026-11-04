@@ -4,7 +4,7 @@ from zergbot.agents import Action, AgentRegistry, CommandArbiter, Intent, Observ
 from zergbot.config import BotConfig
 from zergbot.strategy import ArmyStrategy
 
-C = BotConfig()
+C = BotConfig(burrow_escape_frames=112)
 
 
 def obs(health=0.4, burrowed=False, can_burrow=True, can_emerge=True, researched=True, tag=1):
@@ -200,3 +200,11 @@ def test_escape_order_still_overrides_strategy_even_after_health_recovers():
     arbiter.submit(intent)
     assert arbiter.commands[1].action is Action.RETREAT
     assert agent.decide(obs(0.9), 116, C) is None
+
+
+def test_disabled_escape_preserves_original_burrow_healing_policy():
+    config = BotConfig(burrow_escape_frames=0)
+    agent = RoachAgent(1)
+    agent.decide(obs(0.5, True), 0, config)
+    assert agent.decide(obs(0.4, True), 4, config).reason == "healing"
+    assert agent.escape_until_frame == -1

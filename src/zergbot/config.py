@@ -7,7 +7,7 @@ class BotConfig:
     emerge_health: float = 0.80
     retry_frames: int = 8
     morph_timeout_frames: int = 64
-    burrow_escape_frames: int = 112
+    burrow_escape_frames: int = 0
     workers: int = 44
     defensive_roaches: int = 6
     supply_buffer_min: int = 8
@@ -16,7 +16,7 @@ class BotConfig:
     expansion_retry_frames: int = 224
     attack_roaches: int = 12
     regroup_roaches: int = 6
-    worker_defenders: int = 2
+    worker_defenders: int = 0
     max_bases: int = 3
     game_step: int = 4
     random_seed: int = 1
@@ -28,7 +28,6 @@ class BotConfig:
             min(
                 self.retry_frames,
                 self.morph_timeout_frames,
-                self.burrow_escape_frames,
                 self.workers,
                 self.defensive_roaches,
                 self.supply_buffer_min,
@@ -37,13 +36,14 @@ class BotConfig:
                 self.expansion_retry_frames,
                 self.attack_roaches,
                 self.regroup_roaches,
-                self.worker_defenders,
                 self.max_bases,
                 self.game_step,
             )
             < 1
         ):
             raise ValueError("Counts and frame intervals must be positive")
+        if min(self.worker_defenders, self.burrow_escape_frames) < 0:
+            raise ValueError("Experimental controls must be nonnegative; zero disables")
         if not 0 <= self.random_seed < 2**32:
             raise ValueError("Seed must be a uint32")
         if self.regroup_roaches >= self.attack_roaches:

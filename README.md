@@ -295,3 +295,12 @@ counts and capped own unit/order details without feeding them to the live bot.
 Missing player frames remain null. Older artifacts' `opponent_counts_fog_disabled`
 field means returned visible enemies despite its misleading old name; schema 2
 renames it `visible_opponent_counts`. Neither view establishes exact damage causes.
+
+
+Experimental controls are explicit and recorded in each match's `bot_config`:
+`--worker-defenders 0` disables the squad, `--regroup-roaches 11` reproduces the old
+12-unit attack/retreat trigger, and `--burrow-escape-frames 0` disables emergency
+escape. Positive squad size / escape duration opt into those experiments. The
+worker squad is not promoted after mixed held-out results; emergency escape stays
+off until its live comparison. The default six-roach regroup threshold is the
+next active candidate, not yet a retained performance claim.

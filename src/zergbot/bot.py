@@ -63,7 +63,8 @@ class ZergBot(BotAI):
         )
         threats = self.enemy_units.filter(lambda u: not u.is_flying).closer_than(25, retreat)
         small_worker_incursion = (
-            bool(threats)
+            self.config.worker_defenders > 0
+            and bool(threats)
             and len(threats) <= 2
             and all(
                 u.type_id in {UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.DRONE} for u in threats
