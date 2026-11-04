@@ -23,6 +23,7 @@ class Observation:
     can_emerge: bool = False
     burrow_researched: bool = False
     transition: Action | None = None
+    detection_danger: bool = False
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class RoachAgent:
     previous_health: float | None = None
     previous_burrowed: bool = False
     escape_until_frame: int = -1
+    detection_escape_until_frame: int = -1
 
     def decide(self, obs: Observation, frame: int, config: BotConfig) -> Intent | None:
         if obs.tag != self.tag:
@@ -98,12 +100,24 @@ class RoachAgent:
                 # A continuously stale order must not restart this timer. After
                 # timeout, retry if available, otherwise retreat exposed / wait hidden.
                 self.pending_morph = None
-        escaping = frame < self.escape_until_frame
+        if config.avoid_detected_burrow and obs.detection_danger and self.recovering:
+            self.detection_escape_until_frame = frame + 56
+        detection_escape = (
+            config.avoid_detected_burrow and frame < self.detection_escape_until_frame
+        )
+        escaping = frame < self.escape_until_frame or detection_escape
         if not self.recovering and not escaping:
             return None
         ready = frame - self.last_attempt_frame >= config.retry_frames
         reason = "healing"
-        if escaping:
+        if detection_escape:
+            if not obs.burrowed:
+                action, reason = Action.RETREAT, "observed_detection_danger"
+            elif obs.can_emerge and ready:
+                action, reason = Action.EMERGE, "observed_detection_danger"
+            else:
+                action, reason = Action.WAIT, "detection_emerge_unavailable"
+        elif escaping:
             if not obs.burrowed:
                 action, reason = Action.RETREAT, "escape_after_burrow_damage"
             elif obs.can_emerge and ready:

@@ -98,6 +98,7 @@ EVENT_FIELDS = {
         "can_burrow",
         "can_emerge",
         "researched",
+        "detection_danger",
         "recovering",
         "escape_until_frame",
         "pending_morph",

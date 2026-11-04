@@ -161,6 +161,7 @@ class TelemetryAdapter:
                 agent.recovering,
                 agent.pending_morph,
                 obs.transition,
+                obs.detection_danger,
             )
             changed = self.last_decisions.get(obs.tag) != signature
             if changed:
@@ -177,6 +178,7 @@ class TelemetryAdapter:
                     can_burrow=obs.can_burrow,
                     can_emerge=obs.can_emerge,
                     researched=obs.burrow_researched,
+                    detection_danger=obs.detection_danger,
                     recovering=agent.recovering,
                     escape_until_frame=agent.escape_until_frame,
                     pending_morph=agent.pending_morph.name if agent.pending_morph else None,

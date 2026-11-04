@@ -91,3 +91,25 @@ limitations are documented in `economy-queens-scouting.md`.
 Phase resource reports: 18; reasons {'completed': 18}; runtime exit codes {'1': 1, '0': 17}. Sampled host CPU peaked at 22.7%; available memory stayed above 11.09 GiB. The early fixed software failure is excluded from match comparisons; resource completion alone does not imply a successful game.
 
 Local evidence: `.local-matches/phase2-final-evidence.json` and `.local-matches/phase2-six-pairs/comparison.json`. Comparison SHA-256: `a94e90add1a99d1b9d5e99400932912844dfb55286f21175d2c6ca8e093037da`. The evidence index includes all input paths/hashes and separates later probes from the frozen benchmark. Full replays/telemetry remain local.
+
+## Extension: observed detection recovery experiment
+
+Hypothesis: recovery under visible detection plus nearby ground attackers contributes to
+burrowed-roach attrition. Frozen 85e4165 Harder seed-1 Terran/Protoss/Zerg runs recorded
+153/126/227 own ROACHBURROWED destruction observations and 18/21/60 confirmed emergences.
+Retained five-second detailed snapshots show Ravens/Overseers within a conservative 13-unit
+analysis neighborhood of 41/97 burrowed-roach samples in Terran/Zerg; no Protoss detector was
+visible. This is correlation, not proof of the damage source; detailed events were bounded/evicted.
+
+Candidate `--avoid-detected-burrow` is opt-in. It requires a currently visible, completed detector
+with positive reported detection range covering the roach and a visible ground attacker within
+weapon range plus radii plus a conservative three-unit movement margin. It retreats exposed
+recovering roaches, emerges hidden ones when available, preserves in-flight morph guards, and
+holds retreat for 56 frames after the last risky observation. No unseen observers, scans, spells
+or fog-of-war detection are inferred. This does not solve unanswerable air armies or all-base defense.
+
+Primary metrics: completed win/defeat/cap outcomes, own roach destruction observations, confirmed
+burrow/emergence counts, and decision activation. Compare against the existing frozen 85e4165
+Harder seed-1 runs for all three races at 1200 game seconds/300 wall seconds, identical map,
+SC2/Python seeds, versions and step size. Do not promote from a single favorable result.
+Offline candidate validation: 150 tests and Ruff lint/format passed. Results pending.

@@ -25,6 +25,27 @@ def observed_transition(unit: Unit) -> Action | None:
     return None
 
 
+def detection_danger(unit, enemies) -> bool:
+    """Observed detection coverage plus a plausible nearby ground attack.
+
+    Three units of weapon-range margin are a conservative policy, not proof of
+    targeting or damage. Unknown/zero detection ranges do not establish coverage.
+    Cloaked unseen observers, fog, scans and spells are not inferred here.
+    """
+    visible = [enemy for enemy in enemies if enemy.is_visible]
+    covered = any(
+        enemy.is_detector
+        and enemy.detect_range > 0
+        and enemy.distance_to(unit) <= enemy.detect_range + unit.radius
+        for enemy in visible
+    )
+    return covered and any(
+        enemy.can_attack_ground
+        and enemy.distance_to(unit) <= enemy.ground_range + enemy.radius + unit.radius + 3
+        for enemy in visible
+    )
+
+
 class SC2UnitGateway:
     def __init__(self, bot: BotAI) -> None:
         self.bot = bot
@@ -42,6 +63,12 @@ class SC2UnitGateway:
         abilities = await self.bot.get_available_abilities(queried)
         self.abilities_by_tag = {u.tag: set(a) for u, a in zip(queried, abilities, strict=True)}
         researched = UpgradeId.BURROW in self.bot.state.upgrades
+        avoid_detection = (
+            getattr(getattr(self.bot, "config", None), "avoid_detected_burrow", False) is True
+        )
+        enemies = (
+            list(self.bot.enemy_units) + list(self.bot.enemy_structures) if avoid_detection else []
+        )
         return [
             Observation(
                 unit.tag,
@@ -51,6 +78,7 @@ class SC2UnitGateway:
                 AbilityId.BURROWUP_ROACH in available,
                 researched,
                 observed_transition(unit),
+                detection_danger(unit, enemies) if avoid_detection else False,
             )
             for unit, available in zip(roaches, abilities[: len(roaches)], strict=True)
         ]

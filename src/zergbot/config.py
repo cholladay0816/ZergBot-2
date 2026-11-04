@@ -8,6 +8,7 @@ class BotConfig:
     retry_frames: int = 8
     morph_timeout_frames: int = 64
     burrow_escape_frames: int = 0
+    avoid_detected_burrow: bool = False
     workers: int = 66
     defensive_roaches: int = 6
     supply_buffer_min: int = 8

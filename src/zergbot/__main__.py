@@ -69,6 +69,11 @@ def main() -> None:
         help="Healthy-roach regroup threshold; 11 restores the old 12-unit trigger",
     )
     parser.add_argument(
+        "--avoid-detected-burrow",
+        action="store_true",
+        help="Experimental visible detector/threat recovery avoidance",
+    )
+    parser.add_argument(
         "--burrow-escape-frames",
         type=int,
         default=defaults.burrow_escape_frames,
@@ -110,6 +115,7 @@ def main() -> None:
             worker_defenders=args.worker_defenders,
             regroup_roaches=args.regroup_roaches,
             burrow_escape_frames=args.burrow_escape_frames,
+            avoid_detected_burrow=args.avoid_detected_burrow,
         )
     except ValueError as error:
         parser.error(str(error))
