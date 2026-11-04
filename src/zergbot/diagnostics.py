@@ -243,6 +243,9 @@ class MatchDiagnostics:
         if self.finished:
             return
         self.finished = True
+        if error_type is None and self.error_type:
+            error_type = self.error_type
+            termination = self.termination
         self.outcome, self.termination = outcome, termination
         self.error_type = re.sub(r"[^a-zA-Z0-9_]", "", error_type or "")[:80] or None
         self.record(

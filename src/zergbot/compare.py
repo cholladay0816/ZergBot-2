@@ -73,6 +73,13 @@ def metrics(data):
 
 
 def compare_pair(baseline, candidate):
+    for data in (baseline, candidate):
+        if (
+            data.get("termination") not in {"completed", "time_limit_or_tie"}
+            or data.get("error_type")
+            or data.get("outcome") not in {"Victory", "Defeat", "Tie"}
+        ):
+            raise ValueError("Incomplete or failed matches cannot be performance-compared")
     mismatch = [
         key for key in MATCH_KEYS if baseline["metadata"].get(key) != candidate["metadata"].get(key)
     ]

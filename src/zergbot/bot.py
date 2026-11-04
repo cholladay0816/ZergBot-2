@@ -24,6 +24,17 @@ class ZergBot(BotAI):
         self.economy = Economy(self.config)
 
     async def on_start(self) -> None:
+        try:
+            await self._initialize()
+        except Exception as error:
+            # BurnySC2 converts on_start exceptions into Result.Defeat. Preserve
+            # the diagnostic distinction without recording arbitrary error text.
+            if self.telemetry:
+                self.telemetry.recorder.error_type = type(error).__name__
+                self.telemetry.recorder.termination = "startup_failed"
+            raise
+
+    async def _initialize(self) -> None:
         # Reset after startup/port selection so library placement choices are paired.
         random.seed(self.config.random_seed)
         np.random.seed(self.config.random_seed)

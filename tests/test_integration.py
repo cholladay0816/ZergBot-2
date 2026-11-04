@@ -186,3 +186,23 @@ def test_per_unit_target_is_dispatched_without_changing_other_units():
     gateway.dispatch(arbiter, Point2((10, 10)), Point2((0, 0)))
     gateway.units[1].attack.assert_called_once_with(Point2((2, 3)))
     gateway.units[2].attack.assert_called_once_with(Point2((10, 10)))
+
+
+def test_startup_failure_survives_library_defeat_conversion_without_error_text(tmp_path):
+    import json
+
+    import pytest
+
+    from zergbot.diagnostics import MatchDiagnostics
+
+    recorder = MatchDiagnostics(tmp_path, {})
+    bot = ZergBot(diagnostics=recorder)
+    bot._initialize = AsyncMock(side_effect=RuntimeError("SECRET_TOKEN_should_not_be_recorded"))
+    with pytest.raises(RuntimeError):
+        asyncio.run(bot.on_start())
+    # Simulate BurnySC2 returning Defeat rather than propagating startup errors.
+    recorder.finish("Defeat", "completed")
+    payload = json.loads((tmp_path / "match.json").read_text())
+    assert payload["termination"] == "startup_failed"
+    assert payload["error_type"] == "RuntimeError"
+    assert "SECRET_TOKEN" not in json.dumps(payload)

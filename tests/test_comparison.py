@@ -52,3 +52,11 @@ def test_compare_pairs_same_seed_and_preserves_metrics():
     pair = compare_pair(baseline, candidate)
     assert pair["baseline"]["roaches_240"] == 3
     assert pair["candidate"]["roaches_240"] == 9
+
+
+@pytest.mark.parametrize("termination", ["startup_failed", "in_progress", "crashed_or_interrupted"])
+def test_software_failure_or_incomplete_match_is_not_a_performance_loss(termination):
+    baseline, candidate = match(), match()
+    candidate.update(outcome="Defeat", termination=termination)
+    with pytest.raises(ValueError, match="failed matches"):
+        compare_pair(baseline, candidate)
