@@ -14,6 +14,7 @@ class DiagnosticConfig:
     enabled: bool = True
     sample_frames: int = 112
     max_events: int = 10000
+    max_snapshots: int = 512
     max_detail_units: int = 96
     max_events_per_frame: int = 128
     max_damage_per_frame: int = 16
@@ -24,6 +25,7 @@ class DiagnosticConfig:
             min(
                 self.sample_frames,
                 self.max_events,
+                self.max_snapshots,
                 self.max_detail_units,
                 self.max_events_per_frame,
                 self.max_damage_per_frame,
@@ -114,6 +116,8 @@ class MatchDiagnostics:
         self.clock = clock
         self.started = clock()
         self.events = deque(maxlen=self.config.max_events)
+        self.snapshots = deque(maxlen=self.config.max_snapshots)
+        self.morph_confirmations = Counter()
         self.totals = Counter()
         self.command_counts = Counter()
         self.dropped = 0
@@ -143,6 +147,11 @@ class MatchDiagnostics:
             raise ValueError("Unknown diagnostic event or field")
         self.max_frame = max(self.max_frame, frame)
         self.totals[kind] += 1
+        if kind == "type_changed":
+            if data.get("unit_type") == "ROACHBURROWED" and data.get("previous_type") == "ROACH":
+                self.morph_confirmations["BURROW"] += 1
+            if data.get("unit_type") == "ROACH" and data.get("previous_type") == "ROACHBURROWED":
+                self.morph_confirmations["EMERGE"] += 1
         if frame != self.frame:
             self.frame, self.frame_events = frame, 0
         if self.frame_events >= self.config.max_events_per_frame:
@@ -150,9 +159,10 @@ class MatchDiagnostics:
             return
         self.frame_events += 1
         self.sequence += 1
-        if len(self.events) == self.config.max_events:
+        buffer = self.snapshots if kind == "snapshot" else self.events
+        if len(buffer) == buffer.maxlen:
             self.dropped += 1
-        self.events.append(
+        buffer.append(
             {
                 "id": self.sequence,
                 "kind": kind,
@@ -176,13 +186,14 @@ class MatchDiagnostics:
             "observed_game_to_wall_ratio": self.max_frame / 22.4 / wall if wall > 0 else None,
             "totals": dict(self.totals),
             "command_attempt_counts": dict(self.command_counts),
+            "morph_confirmations": dict(self.morph_confirmations),
             "dropped_events": self.dropped,
             "snapshot_calls": self.snapshot_calls,
             "instrumentation_seconds": self.overhead_seconds,
             "checkpoint_write_errors": self.write_errors,
             "replay": "match.SC2Replay" if (self.directory / "match.SC2Replay").exists() else None,
             "visibility": "Own state and currently visible enemies only; no full replay analysis.",
-            "events": list(self.events),
+            "events": sorted([*self.events, *self.snapshots], key=lambda event: event["id"]),
         }
 
     def checkpoint(self, force=False):

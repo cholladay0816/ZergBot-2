@@ -116,7 +116,7 @@ Tie is distinguished from a completed competitive match.
 ```
 
 `--sample-frames` defaults to 112 game frames (~5 game seconds), `--max-events`
-to 10,000 retained events, and `--no-diagnostics` disables capture/replays.
+to 10,000 retained detailed events plus a separate 512-snapshot timeline, and `--no-diagnostics` disables capture/replays.
 `DiagnosticConfig` also bounds per-frame events (128), damage details (16/frame),
 unit details (96 per side/sample), and checkpoint cadence. Repeated movement and
 attack attempts are counted but detailed only when decisions change; morph attempts
@@ -208,3 +208,15 @@ Also inspect inject attempts, morph confirmations and action errors. This bundle
 candidate cannot isolate the contribution of each change; three seeds are an
 exploratory check, not a reliable win-rate estimate. Full baseline and candidate
 artifacts remain local and unchanged.
+
+
+Wave 1 exploratory result (baseline `624e407`, production candidate `b1ceca7`):
+all three candidate seeds reached the 600-second cap; baseline seeds 1/2 lost at
+476.07/476.61 seconds and seed 3 reached the cap. Seeds 1/3 had 6/6 roaches at
+240 seconds and 12/8 at 360, versus 0/1 and 0/1 in the baseline. Seed 2's early
+timeline was evicted by the detail-event cap; it is reported as missing, not zero.
+An independent bounded snapshot buffer now protects economy evidence from combat
+event bursts, and lifetime morph-confirmation counters survive detail eviction.
+Seed 1's midgame blocked-supply sample rate increased from 0% to 12.2%, and seed 3's
+from 0% to 20.4%. Earlier supply is therefore the next controlled hypothesis.
+These are capped exploratory runs, not demonstrated wins or isolated causal effects.

@@ -59,6 +59,9 @@ def metrics(data):
         and e["previous_type"] == "ROACHBURROWED"
         for e in data["events"]
     )
+    if "morph_confirmations" in data:
+        result["burrow_observations"] = data["morph_confirmations"].get("BURROW", 0)
+        result["emerge_observations"] = data["morph_confirmations"].get("EMERGE", 0)
     result["action_errors"] = sum(e["kind"] == "action_error" for e in data["events"])
     result["invalid_hatchery_placements"] = sum(
         e["kind"] == "action_error" and e["ability_id"] == 1152 and e["result"] == 44

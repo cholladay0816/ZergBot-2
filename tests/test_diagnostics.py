@@ -206,8 +206,34 @@ def test_sample_excludes_fog_snapshots_and_preserves_visible_counts(tmp_path):
         get_terrain_height=lambda _: 128,
     )
     adapter.sample(bot)
-    snapshot = r.events[0]
+    snapshot = r.payload()["events"][0]
     assert [u["tag"] for u in snapshot["visible_enemy"]] == [1]
     assert snapshot["visible_enemy_counts"] == {"ROACH": 1}
     adapter.sample(bot)
     assert r.snapshot_calls == 1
+
+
+def test_combat_event_flood_cannot_evict_economy_timeline(tmp_path):
+    r = recorder(tmp_path, max_events=2, max_snapshots=2)
+    r.record("snapshot", 0, economy={"minerals": 50})
+    for frame in range(1, 20):
+        r.record("created", frame, tag=frame, unit_type="ROACH", scope="own")
+    r.record("snapshot", 112, economy={"minerals": 100})
+    events = r.payload()["events"]
+    assert [e["frame"] for e in events if e["kind"] == "snapshot"] == [0, 112]
+    assert len(r.events) == 2
+    assert len(r.snapshots) == 2
+    r.record("snapshot", 224, economy={"minerals": 150})
+    assert [e["frame"] for e in r.snapshots] == [112, 224]
+
+
+def test_morph_confirmation_totals_survive_event_eviction(tmp_path):
+    r = recorder(tmp_path, max_events=1)
+    r.record(
+        "type_changed", 0, tag=1, unit_type="ROACHBURROWED", previous_type="ROACH", scope="own"
+    )
+    r.record(
+        "type_changed", 4, tag=1, unit_type="ROACH", previous_type="ROACHBURROWED", scope="own"
+    )
+    r.record("created", 8, tag=2, unit_type="ROACH", scope="own")
+    assert r.payload()["morph_confirmations"] == {"BURROW": 1, "EMERGE": 1}
