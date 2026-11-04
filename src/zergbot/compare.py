@@ -138,8 +138,9 @@ def main():
         "",
         f"Baseline: {args.baseline_revision}; candidate: {args.candidate_revision}.",
         "",
-        "| Seed | Variant | Outcome | Seconds | Roach 240/360 | Minerals 360 | Injects | Errors |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Seed | Variant | Outcome | Seconds | Roach 240/360 | Minerals 360 | "
+        "Injects | Action errors | Invalid hatchery |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for pair in pairs:
         for variant in ("baseline", "candidate"):
@@ -151,7 +152,7 @@ def main():
                 f"| {pair['seed']} | {variant} | {outcome} | "
                 f"{metric['observed_game_seconds']:.2f} | {metric['roaches_240']} / "
                 f"{metric['roaches_360']} | {metric['minerals_360']} | "
-                f"{metric['inject_attempts']} | "
+                f"{metric['inject_attempts']} | {metric['action_errors']} | "
                 f"{metric['invalid_hatchery_placements']} |"
             )
     lines += [

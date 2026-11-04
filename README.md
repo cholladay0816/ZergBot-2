@@ -252,3 +252,12 @@ supply policy, measuring outcomes and army-objective/defense switching.
 
 Combat reports group retained HP/shield-loss observations by game minute, with multiple/no-candidate counts and event references. Effect, buff and cloak counts are sampled appearances, not distinct casts or proven causes. Bounded lifetime decision-change and destruction-observation counters survive detail eviction. These counters are absent (unknown) in older artifacts.
 
+
+Wave 2 retained result (three paired SC2/Python seeds, 1,200-second cap): sampled
+supply-block fractions at 120-360 seconds fell from 16.3/30.6/16.3% to 2.0/0/0%.
+Both variants won seed 1 (851.96s baseline, 622.86s candidate) and reached the cap
+on seeds 2/3. Roaches at 360s were 8/11/8 versus 8/9/8. Seed 2 held more minerals
+and fewer roaches, so this supports improved supply availability without claiming
+uniform production improvement or a stable win-rate advantage. No invalid hatchery
+placements occurred in these six runs. The local wave2-supply comparison preserves
+source artifact paths and hashes. Larger supply buffers are retained for later waves.
