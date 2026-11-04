@@ -78,6 +78,12 @@ class MeasuredBot(BotAI):
         self.worker_defense_start = None
         self.worker_defenders = set()
 
+    async def cleanup_ready(self):
+        """Finish initial-worker removal before either side creates scenario actors."""
+        if self.setup_barrier is not None:
+            await asyncio.wait_for(self.setup_barrier.wait(), timeout=15)
+        self.record("cleanup_ready")
+
     async def setup_ready(self):
         if self.setup_barrier is not None:
             await asyncio.wait_for(self.setup_barrier.wait(), timeout=15)
@@ -167,6 +173,7 @@ class Defender(MeasuredBot):
     async def on_start(self):
         self.client.game_step = 4
         self.worker_tags = {u.tag for u in self.workers}
+        await self.cleanup_ready()
         base = self.start_location
         queen = base.towards(self.game_info.map_center, 5)
         attack = approach_point(base, self.game_info.map_center, self.options.approach)
@@ -417,6 +424,7 @@ class Attacker(MeasuredBot):
         self.client.game_step = 4
         # Keep town halls to avoid an artificial elimination. Remove only initial workers.
         await self.client.debug_kill_unit(self.workers)
+        await self.cleanup_ready()
         await self.setup_ready()
 
     async def on_step(self, iteration):
@@ -656,7 +664,7 @@ def main():
     settings = dict(
         vars(args),
         scope="isolated_debug_setup_normal_fog",
-        setup_synchronization="two_player_ready_barrier_15s_timeout",
+        setup_synchronization="cleanup_then_spawn_two_phase_barrier_15s_timeout",
         python_seed=args.seed,
         game_step=4,
         limitations=(
