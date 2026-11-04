@@ -15,6 +15,7 @@ from .integration import SC2UnitGateway
 from .queens import QueenManager
 from .scouting import ScoutManager
 from .search import ExpansionSearch
+from .siege_spacing import SiegeSpacing
 from .strategy import ArmyStrategy
 from .telemetry import TelemetryAdapter
 
@@ -27,6 +28,7 @@ class ZergBot(BotAI):
         self.registry = AgentRegistry()
         self.gateway = SC2UnitGateway(self)
         self.strategy = ArmyStrategy()
+        self.siege_spacing = SiegeSpacing()
         self.search = ExpansionSearch()
         self.economy = Economy(self.config)
         self.adaptive = AdaptiveArmy(self.config)
@@ -144,6 +146,14 @@ class ZergBot(BotAI):
                     reason="visited_visible_map_site",
                     scope="candidate_location_not_known_enemy",
                 )
+        if self.config.roach_siege_spacing:
+            for intent in self.siege_spacing.orders(
+                list(self.gateway.units.values()),
+                list(self.enemy_units),
+                self.state.game_loop,
+                self.in_pathing_grid,
+            ):
+                arbiter.submit(intent)
         for obs in observations:
             intent = self.registry.agents[obs.tag].decide(obs, self.state.game_loop, self.config)
             if intent is not None:

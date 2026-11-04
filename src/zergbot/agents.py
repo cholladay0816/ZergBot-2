@@ -12,6 +12,7 @@ class Action(Enum):
     BURROW = auto()
     EMERGE = auto()
     WAIT = auto()
+    MOVE = auto()
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,7 @@ import math
 from sc2.position import Point2
 
 HARASS_EVENT_FIELDS = {
+    "siege_sample": {"army", "visible_tanks", "minimum_spacing"},
     "hellion_diversion": {
         "tag",
         "reason",
@@ -64,7 +65,7 @@ HARASS_EVENT_FIELDS = {
 
 
 def validate_harass_event(kind, fields):
-    if kind.startswith(("hellion_", "adept_")):
+    if kind.startswith(("hellion_", "adept_", "siege_")):
         if kind not in HARASS_EVENT_FIELDS or fields.keys() - HARASS_EVENT_FIELDS[kind]:
             raise ValueError("Unknown harassment diagnostic event or field")
 

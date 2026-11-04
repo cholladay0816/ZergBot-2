@@ -20,12 +20,15 @@ from sc2.player import Bot
 from sc2.position import Point2
 
 from .adept_micro import AdeptHarass
+from .agents import Action, AgentRegistry, CommandArbiter, Intent
 from .config import BotConfig
 from .diversion import LingDiversion, defend_workers
 from .harass_micro import HellionHarass, validate_harass_event
+from .integration import SC2UnitGateway
 from .queens import QueenManager
 from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
 from .shade_guard import guard_queen
+from .siege_spacing import SiegeSpacing, spacing_sample
 from .tank_micro import split_waypoint
 from .worker_safety import worker_action
 
@@ -169,6 +172,9 @@ class Defender(MeasuredBot):
             queen_recovery=options.queen_recovery,
         )
         self.manager = QueenManager(self.config)
+        self.roach_gateway = SC2UnitGateway(self)
+        self.roach_registry = AgentRegistry()
+        self.siege_spacing = SiegeSpacing()
         self.telemetry = None
         self.worker_tags = set()
         self.active_charges = set()
@@ -194,7 +200,15 @@ class Defender(MeasuredBot):
         if not self.in_pathing_grid(attack):
             attack = base.towards(self.game_info.map_center, 16)
         commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
-        if self.options.scenario == "diversion":
+        if self.options.scenario == "roach-tank":
+            commands = [
+                (U.ROACH, 20, queen, 1),
+                (U.OVERLORD, 1, base.towards(self.game_info.map_center, 10), 1),
+                (U.SIEGETANKSIEGED, 2, attack, 2),
+                (U.MARINE, 8, attack, 2),
+                (U.MARAUDER, 4, attack, 2),
+            ]
+        elif self.options.scenario == "diversion":
             commands = [(U.HELLION, 2, queen, 1), (U.ZERGLING, 12, attack, 2)]
         elif self.options.scenario == "reaper":
             commands.append((U.REAPER, 1, attack, 2))
@@ -240,6 +254,8 @@ class Defender(MeasuredBot):
         self.begin_frame()
         if self.options.scenario == "tank":
             self.tank_defense()
+        elif self.options.scenario == "roach-tank":
+            await self.roach_tank_step()
         if self.options.scenario == "diversion":
             defend_workers(
                 self,
@@ -393,6 +409,40 @@ class Defender(MeasuredBot):
         self.worker_defenders = active
         return handled
 
+    async def roach_tank_step(self):
+        observations = await self.roach_gateway.observe()
+        self.roach_registry.sync(observations)
+        units = list(self.roach_gateway.units.values())
+        enemies = list(self.enemy_units.visible)
+        arbiter = CommandArbiter()
+        for obs in observations:
+            arbiter.submit(Intent(obs.tag, Action.ATTACK, 10, "scenario_army_attack"))
+        if self.options.controller == "micro":
+            for intent in self.siege_spacing.orders(
+                units, enemies, self.state.game_loop, self.in_pathing_grid
+            ):
+                arbiter.submit(intent)
+        for obs in observations:
+            intent = self.roach_registry.agents[obs.tag].decide(
+                obs, self.state.game_loop, self.config
+            )
+            if intent is not None:
+                arbiter.submit(intent)
+        for intent in arbiter.commands.values():
+            if intent.reason in {"visible_siege_spacing", "siege_spacing_motion"}:
+                self.counts["siege_" + intent.action.name] += 1
+        target = approach_point(
+            self.start_location, self.game_info.map_center, self.options.approach
+        )
+        self.roach_gateway.dispatch(arbiter, target, self.start_location)
+        if self.sample_due("siege", self.state.game_loop, 16):
+            self.record(
+                "siege_sample",
+                **spacing_sample(
+                    units, [e for e in enemies if e.type_id in {U.SIEGETANK, U.SIEGETANKSIEGED}]
+                ),
+            )
+
     def tank_defense(self):
         army = list(self.units.of_type({U.ZERGLING, U.BANELING}))
         tanks = self.enemy_units.of_type({U.SIEGETANK, U.SIEGETANKSIEGED})
@@ -508,9 +558,15 @@ class Attacker(MeasuredBot):
                     ling.attack(target)
                 else:
                     ling.attack(home)
-        elif self.options.scenario == "tank":
+        elif self.options.scenario in {"tank", "roach-tank"}:
             for tank in self.units.of_type({U.SIEGETANK, U.SIEGETANKSIEGED}):
-                targets = list(self.enemy_units.of_type({U.ZERGLING, U.BANELING}))
+                targets = list(
+                    self.enemy_units.of_type(
+                        {U.ROACH, U.ROACHBURROWED}
+                        if self.options.scenario == "roach-tank"
+                        else {U.ZERGLING, U.BANELING}
+                    ).visible
+                )
                 if targets:
                     # The scripted tank selects visible clusters, not hidden units.
                     target = max(
@@ -523,6 +579,19 @@ class Attacker(MeasuredBot):
                         position=list(target.position),
                         own_cooldown=float(tank.weapon_cooldown),
                     )
+            if self.options.scenario == "roach-tank":
+                targets = list(self.enemy_units.of_type({U.ROACH, U.ROACHBURROWED}).visible)
+                for soldier in self.units.of_type({U.MARINE, U.MARAUDER}):
+                    if targets:
+                        soldier.attack(
+                            min(
+                                targets,
+                                key=lambda u: (
+                                    u.health if soldier.target_in_range(u) else 1000,
+                                    soldier.distance_to(u),
+                                ),
+                            )
+                        )
         else:
             await self.cannon_step(home)
         self.previous_enemy = {u.tag: (u.position, self.state.game_loop) for u in self.enemy_units}
@@ -694,7 +763,16 @@ def main():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
         "--scenario",
-        choices=["reaper", "lings", "cannon", "tank", "hellion", "adept", "diversion"],
+        choices=[
+            "reaper",
+            "lings",
+            "cannon",
+            "tank",
+            "hellion",
+            "adept",
+            "diversion",
+            "roach-tank",
+        ],
         required=True,
     )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
