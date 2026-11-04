@@ -6,6 +6,7 @@ from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.position import Point2
 
+from .adaptive import AdaptiveArmy
 from .agents import AgentRegistry, CommandArbiter
 from .config import BotConfig
 from .economy import Economy
@@ -27,6 +28,7 @@ class ZergBot(BotAI):
         self.strategy = ArmyStrategy()
         self.search = ExpansionSearch()
         self.economy = Economy(self.config)
+        self.adaptive = AdaptiveArmy(self.config)
         self.queens = QueenManager(self.config)
         self.scouting = ScoutManager(self.config)
 
@@ -68,6 +70,7 @@ class ZergBot(BotAI):
         )
         await self.queens.step(self, self.gateway.abilities_by_tag)
         self.scouting.step(self)
+        self.adaptive.observe(self)
         self.registry.sync(observations)
         arbiter = CommandArbiter()
         retreat = (
@@ -137,6 +140,7 @@ class ZergBot(BotAI):
         if self.telemetry:
             self.telemetry.decisions(observations, self.registry, arbiter, self.state.game_loop)
         self.gateway.dispatch(arbiter, target, retreat)
+        self.adaptive.control(self, target, retreat)
         await self.economy.step(self, iteration, self.gateway.abilities_by_tag)
 
     async def on_unit_created(self, unit):

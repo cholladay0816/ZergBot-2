@@ -18,12 +18,19 @@ def main() -> None:
     )
     parser.add_argument("--realtime", action="store_true")
     parser.add_argument(
+        "--adaptive-army", action=argparse.BooleanOptionalAction, default=defaults.adaptive_army
+    )
+    parser.add_argument(
+        "--roach-tech", action=argparse.BooleanOptionalAction, default=defaults.roach_tech
+    )
+    parser.add_argument(
         "--difficulty", choices=["Easy", "Medium", "Hard", "Harder"], default="Hard"
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--opponent", choices=["Terran", "Protoss", "Zerg"], default="Terran")
     for field in (
         "workers",
+        "tech_min_workers",
         "extra_queens",
         "extra_queens_after_bases",
         "macro_hatches",
@@ -115,6 +122,9 @@ def main() -> None:
             worker_defenders=args.worker_defenders,
             regroup_roaches=args.regroup_roaches,
             burrow_escape_frames=args.burrow_escape_frames,
+            roach_tech=args.roach_tech,
+            adaptive_army=args.adaptive_army,
+            tech_min_workers=args.tech_min_workers,
             avoid_detected_burrow=args.avoid_detected_burrow,
         )
     except ValueError as error:

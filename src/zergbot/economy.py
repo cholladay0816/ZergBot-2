@@ -6,6 +6,7 @@ from sc2.ids.upgrade_id import UpgradeId
 
 from .config import BotConfig
 from .macro import MacroHatchGate, MacroState, extractor_target, queen_target, worker_target
+from .tech import RoachTech
 
 
 def needs_overlord(supply_left, supply_cap, pending_overlords, ready_bases, config):
@@ -26,6 +27,7 @@ class Economy:
         self.next_expansion_frame = 0
         self.macro_gate = MacroHatchGate()
         self.next_macro_frame = 0
+        self.tech = RoachTech(config)
 
     async def step(self, bot: BotAI, iteration: int, abilities_by_tag=None) -> None:
         if iteration % 8 == 0 and not (
@@ -90,7 +92,13 @@ class Economy:
         ):
             bot.train(U.OVERLORD)
             return
-        if threatened and bot.structures(U.ROACHWARREN).ready:
+        ground_pressure = any(
+            bot.enemy_units.filter(lambda u: not u.is_flying and u.can_attack_ground).closer_than(
+                25, b
+            )
+            for b in bot.townhalls.ready
+        )
+        if ground_pressure and bot.structures(U.ROACHWARREN).ready:
             defending_roaches = bot.units.of_type({U.ROACH, U.ROACHBURROWED}).amount
             if defending_roaches + bot.already_pending(U.ROACH) < self.config.attack_roaches:
                 if bot.train(U.ROACH):
@@ -124,11 +132,21 @@ class Economy:
         ) < queen_target(state, self.config):
             if bot.train(U.QUEEN):
                 return
-        if bot.structures(U.ROACHWARREN).ready and not bot.already_pending_upgrade(
-            UpgradeId.BURROW
+        if getattr(bot, "adaptive", None) and await bot.adaptive.produce(bot, home, state):
+            return
+        tech_started = not (self.config.roach_tech or self.config.adaptive_army) or (
+            bot.already_pending_upgrade(UpgradeId.GLIALRECONSTITUTION)
+            and bot.already_pending_upgrade(UpgradeId.ZERGMISSILEWEAPONSLEVEL1)
+        )
+        if (
+            tech_started
+            and bot.structures(U.ROACHWARREN).ready
+            and not bot.already_pending_upgrade(UpgradeId.BURROW)
         ):
             if bot.research(UpgradeId.BURROW):
                 return
+        if await self.tech.step(bot, home, state):
+            return
         if (
             bot.workers.amount
             >= min(22 * max(1, len(resource_bases)), max(16, state.worker_capacity))
@@ -143,7 +161,7 @@ class Economy:
             U.ROACH
         )
 
-        reserve = self.config.attack_roaches if threatened else self.config.defensive_roaches
+        reserve = self.config.attack_roaches if ground_pressure else self.config.defensive_roaches
         if bot.workers.amount >= 20 and bot.structures(U.ROACHWARREN).ready and roaches < reserve:
             if bot.train(U.ROACH):
                 return

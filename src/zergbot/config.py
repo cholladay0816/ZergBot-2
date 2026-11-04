@@ -9,6 +9,9 @@ class BotConfig:
     morph_timeout_frames: int = 64
     burrow_escape_frames: int = 0
     avoid_detected_burrow: bool = False
+    adaptive_army: bool = False
+    roach_tech: bool = False
+    tech_min_workers: int = 32
     workers: int = 66
     defensive_roaches: int = 6
     supply_buffer_min: int = 8
@@ -47,6 +50,7 @@ class BotConfig:
                 self.retry_frames,
                 self.morph_timeout_frames,
                 self.workers,
+                self.tech_min_workers,
                 self.defensive_roaches,
                 self.supply_buffer_min,
                 self.supply_buffer_per_base,
