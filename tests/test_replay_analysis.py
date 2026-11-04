@@ -66,3 +66,25 @@ def test_score_presence_and_zero_are_distinct_and_strict_json_serializable(json_
     assert sample["economy_score"]["collection_rate_minerals"] == 900.5
     assert sample["economy_score"]["collection_rate_vespene"] is None
     assert sample["actual_player_id"] == 1
+
+
+def test_single_player_cli_does_not_request_two_player_merge(tmp_path, monkeypatch):
+    import sys
+    from unittest.mock import AsyncMock, Mock
+
+    from zergbot import replay_analysis, replay_combined
+
+    replay = tmp_path / "test.SC2Replay"
+    replay.write_bytes(b"test placeholder; mocked protocol")
+    payload = dict(perspective=2, samples=[], termination="completed")
+    run = AsyncMock(return_value=payload)
+    report = Mock()
+    combined = Mock()
+    monkeypatch.setattr(replay_analysis, "perspective_pass", run)
+    monkeypatch.setattr(replay_analysis, "comparative_report", report)
+    monkeypatch.setattr(replay_combined, "write_combined", combined)
+    monkeypatch.setattr(sys, "argv", ["replay_analysis", str(replay), "--player", "2"])
+    replay_analysis.main()
+    run.assert_awaited_once_with(replay, 2, 112, 1000)
+    report.assert_called_once_with(tmp_path, [payload])
+    combined.assert_not_called()

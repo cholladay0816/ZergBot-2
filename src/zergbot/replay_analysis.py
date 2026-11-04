@@ -235,7 +235,8 @@ def main():
         comparative_report(replay.parent, passes)
         from .replay_combined import write_combined
 
-        write_combined(replay.parent, passes)
+        if args.player is None:
+            write_combined(replay.parent, passes)
 
     asyncio.run(asyncio.wait_for(run(), timeout=args.wall_timeout))
     print(replay.parent / "replay-analysis-report.md")
