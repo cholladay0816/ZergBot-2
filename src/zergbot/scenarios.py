@@ -47,6 +47,13 @@ class MeasuredBot(BotAI):
         self.previous_positions = {}
         self.last_alive = {}
         self.termination = "incomplete"
+        self.next_samples = {}
+
+    def sample_due(self, key, frame, interval):
+        if frame < self.next_samples.get(key, 0):
+            return False
+        self.next_samples[key] = frame + interval
+        return True
 
     def record(self, kind, **fields):
         if len(self.events) < 3000:
@@ -260,7 +267,7 @@ class Defender(MeasuredBot):
                         self.start_location, self.game_info.map_center, self.options.approach
                     )
                 )
-        if self.state.game_loop % 16 == 0:
+        if self.sample_due("tank", self.state.game_loop, 16):
             distances = [a.distance_to(b) for i, a in enumerate(army) for b in army[i + 1 :]]
             self.record(
                 "tank_army_sample",
@@ -458,7 +465,7 @@ class Attacker(MeasuredBot):
                 probe.build(U.PHOTONCANNON, place)
                 self.next_build = self.state.game_loop + 112
                 self.record("cannon_build_attempt", position=list(place))
-        if self.state.game_loop % 112 == 0:
+        if self.sample_due("construction", self.state.game_loop, 112):
             self.record(
                 "construction",
                 pylons=[float(u.build_progress) for u in self.structures(U.PYLON)],
