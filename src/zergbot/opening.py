@@ -48,3 +48,38 @@ class OpeningBudget:
             self.closed.add(stage)
             return False
         return True
+
+
+class ThirdBaseBudget:
+    """Short mineral hold with release/cooldown; never reserves through pressure."""
+
+    def __init__(self, hold_frames=224, cooldown_frames=672):
+        self.hold_frames = hold_frames
+        self.cooldown_frames = cooldown_frames
+        self.started = None
+        self.next_frame = 0
+        self.reason = "idle"
+
+    def release(self, frame, reason):
+        self.started = None
+        self.next_frame = frame + self.cooldown_frames
+        self.reason = reason
+
+    def reserve(self, *, frame, needed, eligible, safe):
+        if not needed:
+            self.started = None
+            self.reason = "not_needed"
+            return False
+        if not eligible or not safe:
+            if self.started is not None:
+                self.release(frame, "unsafe" if not safe else "ineligible")
+            return False
+        if frame < self.next_frame:
+            return False
+        if self.started is None:
+            self.started = frame
+            self.reason = "holding"
+        if frame - self.started >= self.hold_frames:
+            self.release(frame, "timeout")
+            return False
+        return True

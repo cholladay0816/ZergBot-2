@@ -99,6 +99,11 @@ def main() -> None:
     parser.add_argument("--sample-frames", type=int, default=112)
     parser.add_argument("--max-events", type=int, default=10000)
     parser.add_argument(
+        "--third-base-reserve",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.third_base_reserve,
+    )
+    parser.add_argument(
         "--opening-readiness",
         action=argparse.BooleanOptionalAction,
         default=defaults.opening_readiness,
@@ -145,6 +150,7 @@ def main() -> None:
             opening_supply=args.opening_supply,
             hatch_first=args.hatch_first,
             opening_readiness=args.opening_readiness,
+            third_base_reserve=args.third_base_reserve,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
             queen_recovery=args.queen_recovery,

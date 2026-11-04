@@ -6,7 +6,7 @@ from sc2.ids.upgrade_id import UpgradeId
 
 from .config import BotConfig
 from .macro import MacroHatchGate, MacroState, extractor_target, queen_target, worker_target
-from .opening import HatchFirstOpening, OpeningBudget
+from .opening import HatchFirstOpening, OpeningBudget, ThirdBaseBudget
 from .tech import RoachTech
 
 
@@ -35,6 +35,8 @@ class Economy:
         self.opening = HatchFirstOpening()
         self.opening_status = None
         self.opening_budget = OpeningBudget()
+        self.third_budget = ThirdBaseBudget()
+        self.third_status = None
 
     async def step(self, bot: BotAI, iteration: int, abilities_by_tag=None) -> None:
         if iteration % 8 == 0 and not (
@@ -67,6 +69,30 @@ class Economy:
             bot.larva.amount,
             threatened,
         )
+        third_hold = False
+        if self.config.third_base_reserve:
+            nearby_defense = sum(
+                u.health_percentage >= self.config.emerge_health
+                and any(u.distance_to(base) < 35 for base in ready_resources)
+                for u in bot.units.of_type({U.ROACH, U.HYDRALISK})
+            )
+            structure_pressure = any(
+                bot.enemy_structures.closer_than(25, base) for base in ready_resources
+            )
+            third_hold = self.third_budget.reserve(
+                frame=bot.state.game_loop,
+                needed=len(resource_bases) == 2
+                and not bot.already_pending(U.HATCHERY)
+                and self.config.max_bases > 2,
+                eligible=len(ready_resources) == 2
+                and bot.workers.amount >= min(44, max(16, state.worker_capacity)),
+                safe=not threatened
+                and not structure_pressure
+                and nearby_defense >= self.config.defensive_roaches,
+            )
+            if self.third_status != self.third_budget.reason:
+                self.expansion_event(bot, "third_budget_" + self.third_budget.reason, None)
+                self.third_status = self.third_budget.reason
         # Observe every step, including steps where supply/production returns early.
         macro_count = bot.townhalls.amount - len(resource_bases)
         macro_ready = self.macro_gate.ready(
@@ -214,6 +240,18 @@ class Economy:
                 return
         if await self.tech.step(bot, home, state):
             return
+        if third_hold:
+            if not bot.can_afford(U.HATCHERY):
+                return  # Only discretionary worker/roach spending yields this bounded budget.
+            if bot.state.game_loop >= self.next_expansion_frame:
+                submitted = await self.try_expand(bot)
+                self.third_budget.release(
+                    bot.state.game_loop, "submitted" if submitted else "placement_failed"
+                )
+                if submitted:
+                    return
+            else:
+                self.third_budget.release(bot.state.game_loop, "retry_cooldown")
         if (
             bot.workers.amount
             >= min(22 * max(1, len(resource_bases)), max(16, state.worker_capacity))
