@@ -171,6 +171,7 @@ class TelemetryAdapter:
                     tag=obs.tag,
                     action=intent.action.name,
                     reason=intent.reason,
+                    target=intent.target,
                     health_fraction=obs.health,
                     burrowed=obs.burrowed,
                     can_burrow=obs.can_burrow,
@@ -191,6 +192,7 @@ class TelemetryAdapter:
                     tag=obs.tag,
                     action=intent.action.name,
                     reason=intent.reason,
+                    target=intent.target,
                 )
         self.recorder.overhead_seconds += time.perf_counter() - start
 

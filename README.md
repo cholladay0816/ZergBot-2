@@ -239,3 +239,13 @@ different gameplay steps or Python seeds. Future matched experiments also apply
 this initialization to preserved baseline code through the local test harness.
 Earlier results remain exploratory; fixed seeds do not promise bit-for-bit server
 determinism. No host-wide or SimTrader random state is changed.
+
+
+Wave 3 candidate hypothesis: a small worker incursion near the main can repeatedly
+redirect the entire army between home and the enemy objective. A persistent squad
+of at most two nearby healthy roaches now handles at most two visible enemy workers;
+the remaining army retains its normal objective. Larger or combat-unit incursions
+still request full defense. Dead, recovering and distant defenders are replaced;
+per-unit recovery/morph vetoes retain priority. This does not yet defend every
+expansion or estimate unseen threats. Evaluate paired seeds against the retained
+supply policy, measuring outcomes and army-objective/defense switching.

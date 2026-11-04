@@ -175,3 +175,14 @@ def test_gameplay_seed_is_set_after_startup_and_is_reproducible():
     finally:
         random.setstate(saved_random)
         np.random.set_state(saved_numpy)
+
+
+def test_per_unit_target_is_dispatched_without_changing_other_units():
+    gateway = SC2UnitGateway(Mock())
+    gateway.units = {1: unit(1), 2: unit(2)}
+    arbiter = CommandArbiter()
+    arbiter.submit(Intent(1, Action.ATTACK, 10, "worker_defense", (2, 3)))
+    arbiter.submit(Intent(2, Action.ATTACK, 10, "army_objective"))
+    gateway.dispatch(arbiter, Point2((10, 10)), Point2((0, 0)))
+    gateway.units[1].attack.assert_called_once_with(Point2((2, 3)))
+    gateway.units[2].attack.assert_called_once_with(Point2((10, 10)))

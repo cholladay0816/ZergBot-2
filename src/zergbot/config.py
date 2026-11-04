@@ -14,6 +14,7 @@ class BotConfig:
     supply_buffer_max: int = 16
     expansion_retry_frames: int = 224
     attack_roaches: int = 12
+    worker_defenders: int = 2
     max_bases: int = 3
     game_step: int = 4
     random_seed: int = 1
@@ -32,6 +33,7 @@ class BotConfig:
                 self.supply_buffer_max,
                 self.expansion_retry_frames,
                 self.attack_roaches,
+                self.worker_defenders,
                 self.max_bases,
                 self.game_step,
             )

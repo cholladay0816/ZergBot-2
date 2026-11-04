@@ -51,14 +51,30 @@ class ZergBot(BotAI):
             self.townhalls.ready.first.position if self.townhalls.ready else self.start_location
         )
         threats = self.enemy_units.filter(lambda u: not u.is_flying).closer_than(25, retreat)
+        small_worker_incursion = (
+            bool(threats)
+            and len(threats) <= 2
+            and all(
+                u.type_id in {UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.DRONE} for u in threats
+            )
+        )
+        worker_target = (
+            tuple(threats.closest_to(retreat).position) if small_worker_incursion else None
+        )
         target = (
             threats.closest_to(retreat).position
-            if threats
+            if threats and not small_worker_incursion
             else self.enemy_structures.closest_to(retreat).position
             if self.enemy_structures
             else self.enemy_start_locations[0]
         )
-        for intent in self.strategy.orders(observations, bool(threats), self.config):
+        for intent in self.strategy.orders(
+            observations,
+            bool(threats) and not small_worker_incursion,
+            self.config,
+            worker_target=worker_target,
+            positions={tag: tuple(unit.position) for tag, unit in self.gateway.units.items()},
+        ):
             arbiter.submit(intent)
         for obs in observations:
             intent = self.registry.agents[obs.tag].decide(obs, self.state.game_loop, self.config)

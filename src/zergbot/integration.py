@@ -66,7 +66,7 @@ class SC2UnitGateway:
             elif intent.action is Action.EMERGE:
                 unit(AbilityId.BURROWUP_ROACH)
             elif intent.action is Action.ATTACK and not unit.is_burrowed:
-                unit.attack(target)
+                unit.attack(Point2(intent.target) if intent.target is not None else target)
             elif intent.action is Action.RETREAT and not unit.is_burrowed:
                 unit.move(retreat)
             # WAIT sends no order and deliberately suppresses lower priority commands.

@@ -31,6 +31,7 @@ class Intent:
     action: Action
     priority: int
     reason: str = "unspecified"
+    target: tuple[float, float] | None = None
 
 
 class CommandArbiter:
