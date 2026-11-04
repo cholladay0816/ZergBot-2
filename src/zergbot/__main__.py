@@ -122,6 +122,8 @@ def main() -> None:
         raise
     finally:
         recorder.finish(result.name if result is not None else None, termination, error_type)
+    if recorder.error_type:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -304,3 +304,6 @@ escape. Positive squad size / escape duration opt into those experiments. The
 worker squad is not promoted after mixed held-out results; emergency escape stays
 off until its live comparison. The default six-roach regroup threshold is the
 next active candidate, not yet a retained performance claim.
+
+Wave 3 six-seed decision: do not promote the worker-defense squad. The baseline produced 2 wins, 1 loss and 3 capped games; the candidate produced 3 wins and 3 losses. It gained seed 2 but lost seeds 3/5 before the cap, and was slower in seed 4. Capped games are unresolved outcomes, so these data do not establish a better win rate. The squad defaults to zero; its opt-in implementation remains available for later investigation.
+
