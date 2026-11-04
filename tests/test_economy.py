@@ -241,3 +241,14 @@ def test_macro_timer_observes_supply_preemption_and_resets_stale_scarcity():
     asyncio.run(economy.step(bot, 3))
     assert economy.macro_gate.limited_since == 12
     bot.build.assert_not_awaited()
+
+
+def test_disabled_adaptation_preserves_existing_air_threat_reserve():
+    bot = economy_bot()
+    air = SimpleNamespace(is_flying=True, can_attack_ground=True)
+    bot.enemy_units.filter.side_effect = lambda predicate: SimpleNamespace(
+        closer_than=lambda *args: Group([air]) if predicate(air) else Group()
+    )
+    bot.units.of_type.return_value = Group()
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.ROACH)

@@ -98,6 +98,8 @@ class Economy:
             )
             for b in bot.townhalls.ready
         )
+        if not self.config.adaptive_army:
+            ground_pressure = threatened  # Preserve the frozen baseline when the experiment is off.
         defense_goal = self.config.attack_roaches
         if self.config.adaptive_army and bot.adaptive.air.target() > 0:
             defense_goal = self.config.defensive_roaches
