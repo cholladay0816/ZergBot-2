@@ -69,6 +69,11 @@ class Economy:
         ):
             bot.train(U.OVERLORD)
             return
+        if threatened and bot.structures(U.ROACHWARREN).ready:
+            defending_roaches = bot.units.of_type({U.ROACH, U.ROACHBURROWED}).amount
+            if defending_roaches + bot.already_pending(U.ROACH) < self.config.attack_roaches:
+                if bot.train(U.ROACH):
+                    return
         if not bot.structures(U.SPAWNINGPOOL) and not bot.already_pending(U.SPAWNINGPOOL):
             if bot.workers.amount >= 16 and bot.can_afford(U.SPAWNINGPOOL):
                 await bot.build(
@@ -104,7 +109,8 @@ class Economy:
             if bot.research(UpgradeId.BURROW):
                 return
         if (
-            bot.workers.amount >= 22 * max(1, len(resource_bases))
+            bot.workers.amount
+            >= min(22 * max(1, len(resource_bases)), max(16, state.worker_capacity))
             and len(resource_bases) < self.config.max_bases
             and not bot.already_pending(U.HATCHERY)
             and bot.can_afford(U.HATCHERY)

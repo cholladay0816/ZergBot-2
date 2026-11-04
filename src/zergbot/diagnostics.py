@@ -427,6 +427,29 @@ def write_artifacts(directory, payload):
     from .combat_report import action_error_description, combat_lines
 
     lines += combat_lines(payload)
+    queen_events = [e for e in payload["events"] if e["kind"] == "queen_decision"]
+    assessments = [e for e in payload["events"] if e["kind"] == "muta_assessment"]
+    if queen_events or assessments:
+        lines += [
+            "",
+            "## Queen roles and scouting",
+            "",
+            "Queen roles reserve inject energy; immediate survival/defense can preempt. "
+            "Mutalisk assessments are advisory only and never spend resources. "
+            "Unseen defenses are not assumed absent; coverage/age and known risks are explicit.",
+            "",
+            f"Retained queen role/action changes: {len(queen_events)}; "
+            f"assessment verdicts: {dict(Counter(e['verdict'] for e in assessments))}.",
+            "",
+        ]
+        for event in assessments[-12:]:
+            lines.append(
+                f"- Event {event['id']} at {event['game_seconds']:.1f}s: "
+                f"{event['verdict']}; age frames={event['age_frames']}; "
+                f"covered={event['coverage']}; confirmations={event['confirmations']}; "
+                f"visible workers={event['visible_workers']}; "
+                f"remembered local AA={event['remembered_local_aa']}."
+            )
     deaths = {
         (e["frame"], e["tag"]): e["id"] for e in payload["events"] if e["kind"] == "destroyed"
     }

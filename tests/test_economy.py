@@ -200,3 +200,20 @@ def test_supply_preempts_production_before_old_four_supply_boundary():
     bot.supply_left = 6
     asyncio.run(Economy(BotConfig()).step(bot, 1))
     bot.train.assert_called_once_with(U.OVERLORD)
+
+
+def test_one_gas_capacity_can_expand_without_waiting_for_impossible_worker_target():
+    bot = economy_bot()
+    bot.workers.amount = 19
+    bot.gas_buildings = Group([SimpleNamespace(ideal_harvesters=3)])
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.build.assert_awaited_once()
+
+
+def test_actual_attack_reserves_army_before_optional_queen_spending():
+    bot = economy_bot()
+    bot.units.return_value = Group()
+    bot.units.of_type.return_value = Group()
+    bot.enemy_units.filter.return_value.closer_than.return_value = Group([object()])
+    asyncio.run(Economy(BotConfig()).step(bot, 1))
+    bot.train.assert_called_once_with(U.ROACH)
