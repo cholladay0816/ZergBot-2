@@ -215,6 +215,9 @@ def comparative_report(directory, passes):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("replay", type=Path)
+    parser.add_argument(
+        "--player", type=int, choices=(1, 2), help="Analyze one requested player perspective"
+    )
     parser.add_argument("--step-frames", type=int, default=112)
     parser.add_argument("--max-samples", type=int, default=1000)
     parser.add_argument("--wall-timeout", type=float, default=180)
@@ -225,7 +228,7 @@ def main():
 
     async def run():
         passes = []
-        for player in (1, 2):
+        for player in (args.player,) if args.player is not None else (1, 2):
             passes.append(
                 await perspective_pass(replay, player, args.step_frames, args.max_samples)
             )
