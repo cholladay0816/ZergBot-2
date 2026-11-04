@@ -66,8 +66,38 @@ The four supervisors completed normally in 191.6, 195.5, 231.8 and 201.8 wall se
 
 Local comparison index: `.local-matches/phase4-third-budget-comparison.json`. Local midgame checkpoints preserve early events where the bounded final event buffer could evict them. Snapshot details can omit units at the configured cap; counts remain separate from positional detail. Mineral bank is not income.
 
-## Replay analysis status
+## Replay recovery history
 
 Post-game collection-score capture was added in 3f186d8. The first two-perspective analysis reached its original timeout after player 1 completed and player 2 reached 640 seconds; its partial file is preserved as `replay-perspective-2-partial-original-bound.json`. A single-player recovery option in 066bf93 completed the missing raw pass, then exposed a report-assembly error because the combined report requires two perspectives. ac412b5 fixes that path with a CLI-flow regression. Both completed first-control passes were combined offline without repeating SC2. Remaining analyses use a measured 300-second bound.
 
 Current source passes 231 offline tests and lint. The frozen live candidate passed 229 tests before launch; the later changes concern post-game analysis only.
+
+## Completed replay results
+
+All eight player-perspective passes are complete. Each actual observed player ID matches its requested perspective, and each pass matches the corresponding replay SHA256. These observations are post-game evaluator inputs only, never competitive bot inputs.
+
+| Case | Collected minerals at 6m | At 8m | At 10m |
+|---|---:|---:|---:|
+| third-control-Terran-1 | 7175 | 11130 | 15530 |
+| third-candidate-Terran-1 | 7155 | 11375 | 16265 |
+| third-control-Terran-2 | 7150 | 10885 | 14080 |
+| third-candidate-Terran-2 | 7150 | 10840 | 14570 |
+
+The candidate gained 245 / -45 collected minerals by 8 minutes and 735 / 490 by 10 minutes in seeds 1 / 2. This modest economic effect did not translate into wins. These are API cumulative collection values, not mineral-bank proxies.
+
+In control seed 1, 36 roaches at 420 seconds included a group of 31 within six distance units of one member; all own positional details were retained at that sample. The army reached 40 roaches at 435 seconds, then fell to 14 exposed/burrowed roaches at 465. The opponent fielded Marines, Marauders and tanks. This supports investigating the forward engagement, not attributing the first collapse solely to dispersed reinforcements or the later home-defense failure. It does not establish exact per-shot splash causation.
+
+At 600 seconds, the candidate replay samples omit 17 / 9 own unit details in seeds 1 / 2 because of the bounded detail cap. Full own type counts and score totals remain available, but positional density measures there are lower bounds. Opponent orders/cooldowns are read only from that opponent's separate own-perspective pass.
+
+Local derived metrics: `.local-matches/phase4-third-replay-comparison.json`. Per-match `replay-analysis-report.md` and combined reports retain fuller evaluator evidence.
+
+Replay-pass evidence hashes:
+
+- `20261104T224327Z-7d186b1b/replay-perspective-1.json` SHA256 `b9e88a988e85f364fbfc8bc6897979cc52bd12cea5642ebb817382a0899853dc`.
+- `20261104T224327Z-7d186b1b/replay-perspective-2.json` SHA256 `75aba2c5d504e6e093ee202a367149c23e0c74d4e86defe22bc09fc41c13d199`.
+- `20261104T224639Z-13de934c/replay-perspective-1.json` SHA256 `4030c2e67ed110bc050d0ab9e9a87c914e3dbc36e46b80de688ca9fd3dbc32f9`.
+- `20261104T224639Z-13de934c/replay-perspective-2.json` SHA256 `6772dc753bd83f89df98d32bf16554774451a7702744bc85d6da696d2555b66b`.
+- `20261104T224954Z-962e545b/replay-perspective-1.json` SHA256 `e46ef3e35bee4927aeb470754acc682d8d232ccc089ff2d20479ea769de235d6`.
+- `20261104T224954Z-962e545b/replay-perspective-2.json` SHA256 `5a570a7478fe439b800f46aa0b5741e01232623756fc50042edde871e48836e9`.
+- `20261104T225346Z-784f1c06/replay-perspective-1.json` SHA256 `e3b6d9abca87a2259aeb0fc563bf269c43f254b17c0471ee8632bc41efed5806`.
+- `20261104T225346Z-784f1c06/replay-perspective-2.json` SHA256 `65428b3b13f3a76e22ecf6d81da4838b4365a842a78e17bd783facd4274cddac`.
