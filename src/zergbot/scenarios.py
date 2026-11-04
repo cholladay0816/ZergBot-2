@@ -21,6 +21,7 @@ from sc2.position import Point2
 
 from .adept_micro import AdeptHarass
 from .agents import Action, AgentRegistry, CommandArbiter, Intent
+from .burrow_trial import BurrowTrial
 from .config import BotConfig
 from .diversion import LingDiversion, defend_workers
 from .harass_micro import HellionHarass, validate_harass_event
@@ -80,6 +81,7 @@ class MeasuredBot(BotAI):
         self.commands = Counter()
         self.previous_positions = {}
         self.last_alive = {}
+        self.previous_own_types = {}
         self.termination = "incomplete"
         self.next_samples = {}
         self.worker_defense_start = None
@@ -134,6 +136,11 @@ class MeasuredBot(BotAI):
     def end_frame(self):
         self.counts["conflicting_unit_frames"] += sum(v > 1 for v in self.commands.values())
         self.last_alive = dict(Counter(u.type_id.name for u in self.units))
+        self.previous_own_types = {u.tag: u.type_id.name for u in self.units}
+
+    async def on_unit_destroyed(self, tag):
+        if self.options.scenario == "burrow-tank" and tag in self.previous_own_types:
+            self.record("burrow_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
 
     async def on_unit_took_damage(self, unit, amount_damage_taken):
         self.damage[unit.type_id.name] += float(amount_damage_taken)
@@ -180,6 +187,7 @@ class Defender(MeasuredBot):
         self.active_charges = set()
         self.split_start = None
         self.split_slots = {}
+        self.burrow_trial = BurrowTrial()
 
     async def on_start(self):
         self.client.game_step = 4
@@ -200,7 +208,10 @@ class Defender(MeasuredBot):
         if not self.in_pathing_grid(attack):
             attack = base.towards(self.game_info.map_center, 16)
         commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
-        if self.options.scenario == "roach-tank":
+        if self.options.scenario == "burrow-tank":
+            commands = [(U.SPAWNINGPOOL, 1, base.towards(self.game_info.map_center, 4), 1)]
+            await self.client.debug_all_resources()
+        elif self.options.scenario == "roach-tank":
             commands = [
                 (U.ROACH, 20, queen, 1),
                 (U.OVERLORD, 1, base.towards(self.game_info.map_center, 10), 1),
@@ -252,6 +263,10 @@ class Defender(MeasuredBot):
 
     async def on_step(self, iteration):
         self.begin_frame()
+        if self.options.scenario == "burrow-tank":
+            await self.burrow_trial.step(self)
+            self.end_frame()
+            return
         if self.options.scenario == "tank":
             self.tank_defense()
         elif self.options.scenario == "roach-tank":
@@ -558,12 +573,12 @@ class Attacker(MeasuredBot):
                     ling.attack(target)
                 else:
                     ling.attack(home)
-        elif self.options.scenario in {"tank", "roach-tank"}:
+        elif self.options.scenario in {"tank", "roach-tank", "burrow-tank"}:
             for tank in self.units.of_type({U.SIEGETANK, U.SIEGETANKSIEGED}):
                 targets = list(
                     self.enemy_units.of_type(
                         {U.ROACH, U.ROACHBURROWED}
-                        if self.options.scenario == "roach-tank"
+                        if self.options.scenario in {"roach-tank", "burrow-tank"}
                         else {U.ZERGLING, U.BANELING}
                     ).visible
                 )
@@ -578,6 +593,21 @@ class Attacker(MeasuredBot):
                         tag=int(target.tag),
                         position=list(target.position),
                         own_cooldown=float(tank.weapon_cooldown),
+                    )
+            if self.options.scenario == "burrow-tank":
+                for tank in self.units(U.SIEGETANKSIEGED):
+                    self.record(
+                        "burrow_tank",
+                        tag=int(tank.tag),
+                        own_target=int(tank.orders[0].target)
+                        if tank.orders and isinstance(tank.orders[0].target, int)
+                        else None,
+                        own_cooldown=float(tank.weapon_cooldown),
+                        position=[float(v) for v in tank.position],
+                        visible_roaches=[
+                            int(u.tag)
+                            for u in self.enemy_units.of_type({U.ROACH, U.ROACHBURROWED}).visible
+                        ],
                     )
             if self.options.scenario == "roach-tank":
                 targets = list(self.enemy_units.of_type({U.ROACH, U.ROACHBURROWED}).visible)
@@ -772,12 +802,16 @@ def main():
             "adept",
             "diversion",
             "roach-tank",
+            "burrow-tank",
         ],
         required=True,
     )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
+    parser.add_argument("--burrow-research", action="store_true")
+    parser.add_argument("--burrow-tanks", type=int, choices=(1, 2, 3), default=1)
+    parser.add_argument("--burrow-detection", action="store_true")
     parser.add_argument("--ling-split", action="store_true")
     parser.add_argument("--shade-guard", action="store_true")
     parser.add_argument("--worker-safety", action="store_true")

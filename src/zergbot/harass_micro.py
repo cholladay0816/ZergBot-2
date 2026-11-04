@@ -5,6 +5,22 @@ import math
 from sc2.position import Point2
 
 HARASS_EVENT_FIELDS = {
+    "burrow_destroyed": {"tag", "unit_type"},
+    "burrow_setup": {"phase", "researched"},
+    "burrow_sample": {
+        "tag",
+        "health",
+        "health_max",
+        "position",
+        "burrowed",
+        "researched",
+        "available",
+        "transition",
+        "action",
+        "reason",
+        "own_orders",
+    },
+    "burrow_tank": {"tag", "own_cooldown", "own_target", "position", "visible_roaches"},
     "siege_sample": {"army", "visible_tanks", "minimum_spacing"},
     "hellion_diversion": {
         "tag",
@@ -65,7 +81,7 @@ HARASS_EVENT_FIELDS = {
 
 
 def validate_harass_event(kind, fields):
-    if kind.startswith(("hellion_", "adept_", "siege_")):
+    if kind.startswith(("hellion_", "adept_", "siege_", "burrow_")):
         if kind not in HARASS_EVENT_FIELDS or fields.keys() - HARASS_EVENT_FIELDS[kind]:
             raise ValueError("Unknown harassment diagnostic event or field")
 
