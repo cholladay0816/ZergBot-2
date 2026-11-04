@@ -89,3 +89,50 @@ def test_stalled_morph_times_out_without_burrow_retry_under_detection():
     agent = RoachAgent(1)
     agent.decide(observation(detection_danger=False), 0, C)
     assert agent.decide(observation(transition=Action.BURROW), 64, C).action is Action.RETREAT
+
+
+def test_gateway_uses_shared_query_and_visible_detection_for_each_roach():
+    import asyncio
+    from unittest.mock import AsyncMock, Mock
+
+    from sc2.ids.ability_id import AbilityId
+    from sc2.ids.upgrade_id import UpgradeId
+
+    from zergbot.integration import SC2UnitGateway
+
+    roach = SimpleNamespace(
+        tag=1, health=30, health_max=100, is_burrowed=False, orders=[], radius=0.5
+    )
+    bot = SimpleNamespace(
+        config=C,
+        units=Mock(),
+        enemy_units=[enemy()],
+        enemy_structures=[],
+        state=SimpleNamespace(upgrades={UpgradeId.BURROW}),
+        get_available_abilities=AsyncMock(return_value=[[AbilityId.BURROWDOWN_ROACH]]),
+    )
+    bot.units.of_type.return_value = [roach]
+    observation = asyncio.run(SC2UnitGateway(bot).observe())[0]
+    assert observation.detection_danger and observation.can_burrow
+    bot.get_available_abilities.assert_awaited_once_with([roach])
+
+
+def test_detection_decision_serializes_through_bounded_telemetry(tmp_path):
+    import json
+
+    from zergbot.agents import AgentRegistry
+    from zergbot.diagnostics import MatchDiagnostics
+    from zergbot.telemetry import TelemetryAdapter
+
+    recorder = MatchDiagnostics(tmp_path, {})
+    registry = AgentRegistry()
+    observations = [observation()]
+    registry.sync(observations)
+    arbiter = CommandArbiter()
+    arbiter.submit(registry.agents[1].decide(observations[0], 0, C))
+    TelemetryAdapter(recorder).decisions(observations, registry, arbiter, 0)
+    recorder.finish(termination="time_limit")
+    events = json.loads((tmp_path / "match.json").read_text())["events"]
+    decision = next(e for e in events if e["kind"] == "decision")
+    assert decision["detection_danger"] is True
+    assert decision["reason"] == "observed_detection_danger"
