@@ -259,3 +259,61 @@ scenario Probe. The new two-phase protocol enforces that ordering; its regressio
 delays cleanup and verifies no spawn or gameplay can pass prematurely. This addresses a
 possible race without claiming it occurred in older artifacts. 201 offline tests pass.
 Live validation of this exact setup revision is pending separately from the match wave.
+
+
+## Two-seed full opening comparison
+
+The frozen `02eb55f` control and `a8e1828` candidate use the same adaptive-army and
+roach-tech options. Only the candidate enables opening-supply and hatch-first. Queen
+recovery, tactical queen micro, and detection/damage burrow escape remain disabled.
+Harder AI, Abyssal Reef, seeds 1/2, step 4, 1200 game seconds / 300 wall seconds per run.
+
+| Race | Seed | Control | Candidate | 4-minute workers, control -> candidate |
+|---|---:|---|---|---|
+| Terran | 1 | Defeat 826.4s | Defeat 887.5s | 25 -> 32 |
+| Terran | 2 | Defeat 813.4s | Defeat 1013.0s | 22 -> 31 |
+| Protoss | 1 | Defeat 978.4s | Victory 612.1s | 24 -> 32 |
+| Protoss | 2 | Defeat 932.0s | Victory 607.1s | 24 -> 27 |
+| Zerg | 1 | Victory 771.2s | Victory 544.3s | 26 -> 34 |
+| Zerg | 2 | Victory 529.1s | Victory 549.8s | 22 -> 33 |
+
+The economic probes above used supply-only controls and are separate from these full
+adaptive-army comparisons. Do not combine their six-minute worker counts as if the army
+policy were identical. These two seeds are exploratory evidence, not a general win-rate
+estimate. Terran remains unresolved; longer survival is not a win. No difficulty increase
+or universal opening claim follows. Existing defaults remain unchanged.
+
+Reproduce the stronger-opening candidate explicitly:
+
+```powershell
+.\.venv\Scripts\python.exe -m zergbot --map AbyssalReefLE --difficulty Harder --seed 1 --game-time-limit 1200 --opening-supply --hatch-first --adaptive-army --roach-tech
+```
+
+Full match evidence and hashes:
+- `20261104T201016Z-d6e6f8a5` (Terran seed 1, control): SHA-256 `e09bc904477c32d6d12c4386b630de2f44501a7589b71f2eb82e83c689239f62`; dropped detail events 0.
+- `20261104T201327Z-ade5eed0` (Protoss seed 1, control): SHA-256 `aa321195cc4db36a0f6f3fb3b1daaa04aa0b5184dd6c99d3173c3be4758037bf`; dropped detail events 0.
+- `20261104T201709Z-63ddc557` (Zerg seed 1, control): SHA-256 `e2062a6b07abcda55b8d203878c4da87e1d7d443ab08251605041d6fbfe2bf99`; dropped detail events 478.
+- `20261104T210636Z-b92a913f` (Terran seed 1, candidate): SHA-256 `5de475af84b26fb40844444833b43623ae8f77ca8a7e134943f97e8f6057b133`; dropped detail events 656.
+- `20261104T210948Z-cccfbb36` (Protoss seed 1, candidate): SHA-256 `e435ede6d47ff764508ad18edc49987c0a0442f6088da8ea38b40fef1377f1af`; dropped detail events 0.
+- `20261104T211157Z-2eb2478d` (Zerg seed 1, candidate): SHA-256 `d9471d10f21e9d6065db91ba3d1cce4e24a07d9914f1dcf0fe3485484c4aedf0`; dropped detail events 158.
+- `20261104T211806Z-c74cc2f5` (Terran seed 2, control): SHA-256 `f85c44eb849566a11b1c9472c34aba4da6cad50b51d2edee1265f9ebf4bf3db0`; dropped detail events 0.
+- `20261104T212058Z-871f92c7` (Terran seed 2, candidate): SHA-256 `536bc1b2239242a78569349d584021d882417edb97b90278a1290b694291ab3b`; dropped detail events 2031.
+- `20261104T212454Z-84a8f245` (Protoss seed 2, control): SHA-256 `464af478e063bde65c03b07aaf1a9bdf55167a435e2f2b410c1d8dbfb7e3c714`; dropped detail events 0.
+- `20261104T212816Z-c7105c6f` (Protoss seed 2, candidate): SHA-256 `af1a79e06bcf4a42d935f4bd4226a0bd410de5733a200abc61564d6318c05e5c`; dropped detail events 0.
+- `20261104T213025Z-e81e1c18` (Zerg seed 2, control): SHA-256 `b3c432208fccd9ee6b5eb1cacd56f1d14c9ca3b66de0ea3e3060cdc7346ed690`; dropped detail events 0.
+- `20261104T213200Z-2c6f5f10` (Zerg seed 2, candidate): SHA-256 `2d6a34251d7f80ff3b0375ac52a8b652b6d185fb17023638acf3f67b77b29fc6`; dropped detail events 0.
+
+Detailed events are bounded, so some matches omit individual events after reaching the
+configured retention limit; aggregate counters and explicit outcomes are retained. Missing
+detail is not evidence that an action did not occur. Full local comparison index:
+`.local-matches/phase4-opening-full-comparisons.json`.
+
+### Worker-release correction awaiting isolated comparison
+
+`4b323d541c6d6181aca39317eedb84f2c8297b6b` fixes a scenario-only command-ownership bug:
+after defense expires, the worker receives one gather command and leaves the controlled
+set. Previously it remained in that set and received gather again each subsequent frame,
+which could interrupt cargo returns. A regression verifies release happens exactly once
+while the threat remains visible. This is independent of the opening match source.
+202 offline tests and lint/format checks pass. Live pairs use the same two-phase setup
+barrier on both sides (`2341fd5` control, `4b323d5` correction).
