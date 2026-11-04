@@ -354,3 +354,35 @@ and both-player hashes. Defender artifact hashes:
 - `scenario-20261104T213552Z-lings-micro1`: `7b7bf1013f326d5fe176bdfcbb1408e551d0baae0be34dd6053706db8cfa47a3`.
 - `scenario-20261104T213623Z-lings-micro2`: `24264115c9edb440e28626985f336bb3d8bef5d3e0a3ef5a6f7432aca264f3e1`.
 - `scenario-20261104T213653Z-lings-micro2`: `5a954779541e5b66544353aab9f8f1d90a4d571ba3dd186485aaa1eabfda13f4`.
+
+
+## Detection avoidance under the stronger opening
+
+The existing experimental detector-avoidance policy was retested, not silently promoted.
+Both sides use frozen `a8e1828` with opening-supply, hatch-first, adaptive-army and roach-tech.
+The only changed policy flag is `--avoid-detected-burrow`. Same map, Harder Terran,
+seeds 1/2, step 4, 1200-game-second and 300-wall-second bounds.
+
+Hypothesis: a low-health roach should avoid hiding under an observed detector with a
+plausible nearby ground attacker. The preceding seed-1 match has 22 retained burrow
+confirmations near Missile Turrets in preceding snapshots (up to five seconds old).
+That is supporting proximity evidence, not proof of exact coverage at each command or
+of who killed each roach. Both opening controls lost, with many burrowed deaths.
+
+| Seed | Policy | Outcome / game seconds | Exposed roach deaths | Burrowed deaths | Total roach deaths | Detector-danger retreat decisions |
+|---|---|---|---:|---:|---:|---:|
+| 1 | control | Defeat / 887.5 | 60 | 117 | 177 | 0 |
+| 1 | avoidance | Defeat / 902.9 | 116 | 86 | 202 | 119 |
+| 2 | control | Defeat / 1013.0 | 69 | 141 | 210 | 0 |
+| 2 | avoidance | Defeat / 1179.5 | 134 | 115 | 249 | 168 |
+
+The policy is exercised, but fewer burrowed deaths alone are not success: exposed losses
+can rise, and a retreat may preserve neither the army nor the match. It remains off by
+default pending a convincing repeated outcome benefit. Damage-triggered escape was not
+enabled. No exact kill-source attribution or universal detection knowledge is claimed;
+fog, unseen detectors, scans and spells remain limitations of this narrow policy.
+Local index: `.local-matches/phase4-opening-detection-comparisons.json`.
+- `20261104T210636Z-b92a913f`: SHA-256 `5de475af84b26fb40844444833b43623ae8f77ca8a7e134943f97e8f6057b133`.
+- `20261104T213804Z-95162d3f`: SHA-256 `2f0cd88675700fbcc47084847d578c0e6e54c208c23e732ad7712c37871f335a`.
+- `20261104T212058Z-871f92c7`: SHA-256 `536bc1b2239242a78569349d584021d882417edb97b90278a1290b694291ab3b`.
+- `20261104T214121Z-7a40d22f`: SHA-256 `2686a9e2236687b6c142a084227734df4f786f3d5136f91baa5a2a236c411a74`.
