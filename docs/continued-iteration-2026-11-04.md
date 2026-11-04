@@ -70,7 +70,7 @@ is **not** a full hatch-first build. Defaults stay unchanged pending live compar
 Six-minute Harder runs compare flag off/on for each race with matching seed 1. Their
 caps are unresolved results used for economy measurements, not victories.
 
-Current code checks: 190 offline tests and Ruff pass. All live runs remain sequential,
+At the Cannon-setup checkpoint: 190 offline tests and Ruff passed. All live runs remain sequential,
 below-normal priority, CPUs 20-23, finite game/wall time, with resource guards. No changes
 to SimTrader settings. Further results will append here with exact revision labels.
 
@@ -141,3 +141,61 @@ Full index and hashes: `.local-matches/phase4-queen-recovery-comparisons.json`.
 - `scenario-20261104T204802Z-cannon-micro1` recovery=True.
 - `scenario-20261104T204834Z-cannon-micro2` recovery=False.
 - `scenario-20261104T204907Z-cannon-micro2` recovery=True.
+
+## Mineral-side Reaper pressure
+
+Frozen runtime be9b2a2c1f0b8d3e360840669bb6ab554a172e91. New optional mineral-side
+debug ingress puts the Reaper behind/alongside the worker pocket rather than only at
+the front of the queen. Setup refuses an invalid pathing point instead of silently
+claiming a valid test. All three controllers face the same opportunity-scored attacker:
+own ability readiness/range checks, current visible worker/queen coverage, a bounded
+half-second motion estimate, own-cooldown kiting and health retreat/re-engagement.
+No unseen enemy orders/cooldowns enter either policy. 90-second caps, step 4, seeds 1/2/3.
+
+| Approach | Controller | Recovery | Workers lost | Worker HP loss | Lowest-HP worker selections / worker attack decisions | Injured-worker attack decisions | KD8 attempts / observed | Final minerals |
+|---|---|---|---:|---:|---|---:|---|---:|
+| 0 | baseline | False | 1 | 154.4 | 26/26 | 25 | 3/2 | 1000 |
+| 0 | micro | False | 0 | 115.1 | 12/12 | 12 | 3/3 | 985 |
+| 0 | micro | True | 0 | 114.7 | 12/12 | 12 | 3/3 | 975 |
+| 1 | baseline | False | 0 | 114.6 | 13/13 | 13 | 2/2 | 965 |
+| 1 | micro | False | 0 | 122.7 | 13/13 | 13 | 3/3 | 970 |
+| 1 | micro | True | 0 | 131.2 | 14/14 | 14 | 3/3 | 980 |
+| 2 | baseline | False | 0 | 114.9 | 13/13 | 13 | 3/3 | 975 |
+| 2 | micro | False | 3 | 310.8 | 105/105 | 99 | 4/4 | 980 |
+| 2 | micro | True | 0 | 118.9 | 13/13 | 13 | 3/3 | 990 |
+
+The attacker now has actual worker-access opportunities and casts at worker clusters;
+the baseline loses one worker on approach 0, and micro without recovery loses three on
+approach 2. Reaper and queen survive every capped run. This is meaningful pressure but
+does not establish optimal adversarial play. Grenade attempts remain distinct from
+defender-observed episodes; absent confirmation is not counted as a successful cast/hit.
+HP-loss counters and final unspent bank are observations, not exact damage attribution
+or normalized mining efficiency.
+
+Crucially, minimum sampled queen HP exceeds 118 in every run, above the 52.5-HP recovery
+trigger. The zero-loss recovery-enabled group cannot be credited to a recovery action
+that was never needed. Differences between equivalent effective controllers expose run
+variability. The queen-micro policy is not promoted from this set.
+
+### Setup synchronization
+
+The installed library runs both BotAI participants concurrently. Checkpoint
+1e38b08ee6382c6447cc868fff84d878d259c806 adds a two-player setup-ready barrier with a
+15-wall-second timeout and explicit Python/NumPy seeding before the first game step.
+Only readiness is shared; no hidden unit state enters decisions. Unit regression confirms
+neither participant passes the barrier alone. Live pilot
+`scenario-20261104T210528Z-reaper-micro2` records setup-ready at frame 0 for both players,
+completes the cap with zero worker losses and three attempts/three observed charges.
+This single pilot validates operation, **not bit-for-bit repeatability**. Subsequent
+replicates must remain separately labeled from the asynchronous-setup results above.
+
+Full per-run evidence/hashes: `.local-matches/phase4-reaper-ingress-comparisons.json`.
+- `scenario-20261104T205445Z-reaper-baseline0`: Reaper movement during own cooldown observed 40 times; worker-targeted grenade attempts 2.
+- `scenario-20261104T205515Z-reaper-micro0`: Reaper movement during own cooldown observed 66 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205545Z-reaper-micro0`: Reaper movement during own cooldown observed 76 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205616Z-reaper-baseline1`: Reaper movement during own cooldown observed 36 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205646Z-reaper-micro1`: Reaper movement during own cooldown observed 73 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205716Z-reaper-micro1`: Reaper movement during own cooldown observed 84 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205745Z-reaper-baseline2`: Reaper movement during own cooldown observed 66 times; worker-targeted grenade attempts 1.
+- `scenario-20261104T205815Z-reaper-micro2`: Reaper movement during own cooldown observed 67 times; worker-targeted grenade attempts 3.
+- `scenario-20261104T205843Z-reaper-micro2`: Reaper movement during own cooldown observed 87 times; worker-targeted grenade attempts 1.
