@@ -79,3 +79,30 @@ def test_bot_instances_have_independent_agent_state():
     assert first.registry is not second.registry
     assert first.gateway.bot is first
     assert ROACH_TYPES == {U.ROACH, U.ROACHBURROWED}
+
+
+def test_real_sc2_unit_enqueues_one_protocol_command():
+    # Exercise actual BurnySC2 Unit.__call__, not just a Mock standing in for Unit.
+    from s2clientprotocol.raw_pb2 import Unit as RawUnit
+    from sc2.unit import Unit
+
+    bot = SimpleNamespace(
+        state=SimpleNamespace(game_loop=0),
+        unit_command_uses_self_do=False,
+        game_data=SimpleNamespace(
+            abilities={A.BURROWDOWN_ROACH.value: SimpleNamespace(_proto=SimpleNamespace(target=1))}
+        ),
+        do=Mock(return_value=True),
+    )
+    roach = Unit(RawUnit(tag=7, unit_type=U.ROACH.value, health=40, health_max=145), bot)
+    gateway = SC2UnitGateway(bot)
+    gateway.units = {7: roach}
+    arbiter = CommandArbiter()
+    arbiter.submit(Intent(7, Action.BURROW, 100))
+    arbiter.submit(Intent(7, Action.ATTACK, 10))
+    gateway.dispatch(arbiter, Point2((10, 10)), Point2((0, 0)))
+    bot.do.assert_called_once()
+    command = bot.do.call_args.args[0]
+    assert command.ability is A.BURROWDOWN_ROACH
+    assert command.unit.tag == 7
+    assert command.target is None
