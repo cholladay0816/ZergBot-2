@@ -45,3 +45,15 @@ def test_lifetime_decisions_and_destructions_survive_eviction_with_bounded_keys(
     assert sum(payload["decision_change_counts"].values()) == 300
     assert len(payload["decision_change_counts"]) <= 128
     assert len(payload["events"]) == 1
+
+
+def test_action_errors_decode_with_death_correlation_without_claiming_cause():
+    from zergbot.combat_report import action_error_description
+
+    event = {"id": 3, "game_seconds": 5, "frame": 112, "tag": 7, "ability_id": 1386, "result": 2}
+    text = action_error_description(event, {(112, 7): 2})
+    assert "BURROWDOWN_ROACH" in text and "NotSupported" in text
+    assert "event 2" in text and "not proof" in text
+    assert "destruction" not in action_error_description(event, {(112, 8): 2})
+    event.update(ability_id=999999, result=999999)
+    assert action_error_description(event, {}).count("unknown") == 2

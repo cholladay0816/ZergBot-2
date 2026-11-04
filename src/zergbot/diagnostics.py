@@ -405,16 +405,15 @@ def write_artifacts(directory, payload):
         f"Own destruction-event types: {dict(losses)}. These may include worker "
         "consumption for construction, not just combat kills.",
     ]
-    from .combat_report import combat_lines
+    from .combat_report import action_error_description, combat_lines
 
     lines += combat_lines(payload)
+    deaths = {
+        (e["frame"], e["tag"]): e["id"] for e in payload["events"] if e["kind"] == "destroyed"
+    }
     for event in payload["events"]:
         if event["kind"] == "action_error":
-            lines.append(
-                f"- Event {event['id']} at {event['game_seconds']:.2f}s: "
-                f"unit {event['tag']}, ability {event['ability_id']}, "
-                f"SC2 result code {event['result']}."
-            )
+            lines.append(action_error_description(event, deaths))
     if (directory / "replay-analysis-report.md").exists():
         lines += [
             "",

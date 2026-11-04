@@ -68,3 +68,29 @@ def combat_lines(payload):
         "are not automatically combat losses.",
     ]
     return lines
+
+
+def action_error_description(event, deaths):
+    from s2clientprotocol.error_pb2 import ActionResult
+    from sc2.ids.ability_id import AbilityId
+
+    try:
+        ability = AbilityId(event["ability_id"]).name
+    except ValueError:
+        ability = "unknown"
+    try:
+        result = ActionResult.Name(event["result"])
+    except ValueError:
+        result = "unknown"
+    line = (
+        f"- Event {event['id']} at {event['game_seconds']:.2f}s: "
+        f"unit {event['tag']}, ability {event['ability_id']} ({ability}), "
+        f"SC2 result {event['result']} ({result})."
+    )
+    evidence = deaths.get((event["frame"], event["tag"]))
+    if evidence is not None:
+        line += (
+            f" Same-tag destruction was observed in the same frame (event {evidence}); "
+            "this is a correlation, not proof of rejection cause."
+        )
+    return line
