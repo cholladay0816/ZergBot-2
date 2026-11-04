@@ -10,6 +10,7 @@ from .agents import AgentRegistry, CommandArbiter
 from .config import BotConfig
 from .economy import Economy
 from .integration import SC2UnitGateway
+from .queens import QueenManager
 from .search import ExpansionSearch
 from .strategy import ArmyStrategy
 from .telemetry import TelemetryAdapter
@@ -25,6 +26,7 @@ class ZergBot(BotAI):
         self.strategy = ArmyStrategy()
         self.search = ExpansionSearch()
         self.economy = Economy(self.config)
+        self.queens = QueenManager(self.config)
 
     async def on_start(self) -> None:
         try:
@@ -58,7 +60,11 @@ class ZergBot(BotAI):
     async def on_step(self, iteration: int) -> None:
         if self.telemetry:
             self.telemetry.sample(self)
-        observations = await self.gateway.observe(self.units(UnitTypeId.QUEEN).ready)
+        observations = await self.gateway.observe(
+            list(self.units(UnitTypeId.QUEEN).ready)
+            + list(self.structures(UnitTypeId.CREEPTUMORBURROWED).ready)
+        )
+        await self.queens.step(self, self.gateway.abilities_by_tag)
         self.registry.sync(observations)
         arbiter = CommandArbiter()
         retreat = (

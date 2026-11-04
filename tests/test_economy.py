@@ -25,13 +25,24 @@ class Group(list):
 
 
 def economy_bot():
-    home = SimpleNamespace(position=Point2((10, 10)), has_buff=lambda _: True)
+    home = SimpleNamespace(
+        position=Point2((10, 10)),
+        has_buff=lambda _: True,
+        distance_to=lambda p: Point2((10, 10)).distance_to(p),
+        is_ready=True,
+        ideal_harvesters=16,
+        surplus_harvesters=0,
+    )
     bot = SimpleNamespace(
         townhalls=Group([home]),
         supply_left=10,
         supply_cap=44,
         workers=SimpleNamespace(amount=20),
-        gas_buildings=SimpleNamespace(amount=2),
+        gas_buildings=Group([SimpleNamespace(ideal_harvesters=3)] * 2),
+        expansion_locations_list=[Point2((10, 10))],
+        minerals=300,
+        vespene=100,
+        larva=Group([object()]),
         structures=Mock(return_value=Group([home])),
         units=Mock(return_value=Group([home])),
         enemy_units=Mock(),
@@ -138,30 +149,6 @@ def test_queen_production_uses_townhall_without_consuming_larva():
     bot.units.return_value = Group()
     asyncio.run(Economy(BotConfig()).step(bot, 1))
     bot.train.assert_called_once_with(U.QUEEN)
-
-
-def test_queen_injects_are_available_idle_and_one_per_unbuffed_base():
-    from sc2.ids.ability_id import AbilityId as A
-
-    bot = economy_bot()
-    base = bot.townhalls.first
-    base.has_buff = lambda _: False
-    first = Mock(tag=1, orders=[], distance_to=Mock(return_value=2))
-    second = Mock(tag=2, orders=[], distance_to=Mock(return_value=3))
-    bot.units.return_value = Group([first, second])
-    economy = Economy(BotConfig())
-    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}, 2: {A.EFFECT_INJECTLARVA}})
-    first.assert_called_once_with(A.EFFECT_INJECTLARVA, base)
-    second.assert_not_called()
-    first.reset_mock()
-    first.orders = [object()]
-    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}})
-    first.assert_not_called()
-    second.assert_not_called()
-    first.orders = []
-    base.has_buff = lambda _: True
-    economy.inject(bot, {1: {A.EFFECT_INJECTLARVA}})
-    first.assert_not_called()
 
 
 def test_blocked_expansion_throttles_retries_and_does_not_spend():

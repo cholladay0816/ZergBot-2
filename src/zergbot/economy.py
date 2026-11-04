@@ -1,12 +1,11 @@
 """Conservative roach economy; one spending decision per step prevents overspend."""
 
 from sc2.bot_ai import BotAI
-from sc2.ids.ability_id import AbilityId
-from sc2.ids.buff_id import BuffId
 from sc2.ids.unit_typeid import UnitTypeId as U
 from sc2.ids.upgrade_id import UpgradeId
 
 from .config import BotConfig
+from .macro import MacroHatchGate, MacroState, extractor_target, queen_target, worker_target
 
 
 def needs_overlord(supply_left, supply_cap, pending_overlords, ready_bases, config):
@@ -25,13 +24,41 @@ class Economy:
     def __init__(self, config: BotConfig) -> None:
         self.config = config
         self.next_expansion_frame = 0
+        self.macro_gate = MacroHatchGate()
+        self.next_macro_frame = 0
 
     async def step(self, bot: BotAI, iteration: int, abilities_by_tag=None) -> None:
-        if iteration % 8 == 0:
+        if iteration % 8 == 0 and not (
+            self.config.adaptive_economy and bot.vespene > max(400, bot.minerals * 1.5)
+        ):
             await bot.distribute_workers()
         if not bot.townhalls.ready:
             return
-        self.inject(bot, abilities_by_tag or {})
+        # Resource bases are map expansion sites, not arbitrary production hatcheries.
+        resource_bases = [
+            base
+            for base in bot.townhalls
+            if any(base.distance_to(p) < 8 for p in bot.expansion_locations_list)
+        ]
+        ready_resources = [base for base in resource_bases if base.is_ready]
+        threatened = any(
+            bot.enemy_units.filter(lambda u: u.can_attack_ground).closer_than(25, b)
+            for b in bot.townhalls.ready
+        )
+        state = MacroState(
+            len(resource_bases),
+            len(ready_resources),
+            bot.townhalls.ready.amount,
+            bot.workers.amount,
+            sum(b.ideal_harvesters for b in ready_resources)
+            + sum(g.ideal_harvesters for g in bot.gas_buildings.ready),
+            bot.minerals,
+            bot.vespene,
+            bot.larva.amount,
+            threatened,
+        )
+        if iteration % 8 == 0 and self.config.adaptive_economy:
+            self.rebalance_gas(bot, state)
         home = bot.townhalls.ready.first
         if needs_overlord(
             bot.supply_left,
@@ -48,7 +75,9 @@ class Economy:
                     U.SPAWNINGPOOL, near=home.position.towards(bot.game_info.map_center, 5)
                 )
                 return
-        if bot.workers.amount >= 16 and bot.gas_buildings.amount < bot.townhalls.amount * 2:
+        if bot.workers.amount >= 16 and bot.gas_buildings.amount < extractor_target(
+            state, self.config
+        ):
             for base in bot.townhalls.ready:
                 for geyser in bot.vespene_geyser.closer_than(10, base):
                     if bot.gas_buildings.closer_than(1, geyser):
@@ -64,11 +93,9 @@ class Economy:
         ):
             await bot.build(U.ROACHWARREN, near=home.position.towards(bot.game_info.map_center, 7))
             return
-        if (
-            bot.structures(U.SPAWNINGPOOL).ready
-            and bot.units(U.QUEEN).amount + bot.already_pending(U.QUEEN)
-            < bot.townhalls.ready.amount
-        ):
+        if bot.structures(U.SPAWNINGPOOL).ready and bot.units(U.QUEEN).amount + bot.already_pending(
+            U.QUEEN
+        ) < queen_target(state, self.config):
             if bot.train(U.QUEEN):
                 return
         if bot.structures(U.ROACHWARREN).ready and not bot.already_pending_upgrade(
@@ -77,8 +104,8 @@ class Economy:
             if bot.research(UpgradeId.BURROW):
                 return
         if (
-            bot.workers.amount >= 22 * bot.townhalls.amount
-            and bot.townhalls.amount < self.config.max_bases
+            bot.workers.amount >= 22 * max(1, len(resource_bases))
+            and len(resource_bases) < self.config.max_bases
             and not bot.already_pending(U.HATCHERY)
             and bot.can_afford(U.HATCHERY)
         ):
@@ -88,47 +115,70 @@ class Economy:
         roaches = bot.units.of_type({U.ROACH, U.ROACHBURROWED}).amount + bot.already_pending(
             U.ROACH
         )
-        threatened = any(
-            bot.enemy_units.filter(lambda u: not u.is_flying).closer_than(25, base)
-            for base in bot.townhalls.ready
-        )
+
         reserve = self.config.attack_roaches if threatened else self.config.defensive_roaches
         if bot.workers.amount >= 20 and bot.structures(U.ROACHWARREN).ready and roaches < reserve:
             if bot.train(U.ROACH):
                 return
-        worker_goal = min(self.config.workers, 22 * bot.townhalls.amount)
+        worker_goal = worker_target(state, self.config)
         if bot.workers.amount + bot.already_pending(U.DRONE) < worker_goal:
             if bot.train(U.DRONE):
+                return
+        if self.macro_gate.ready(
+            state,
+            self.config,
+            bot.state.game_loop,
+            bot.townhalls.amount - len(resource_bases),
+            bot.already_pending(U.HATCHERY),
+        ):
+            if await self.try_macro(bot, home):
                 return
         if bot.structures(U.ROACHWARREN).ready:
             bot.train(U.ROACH)
 
-    def inject(self, bot, abilities_by_tag):
-        # Energy spells do not share the mineral/gas spending decision. Reserve each
-        # base once locally because the injection buff appears only next observation.
-        available_bases = [
-            base for base in bot.townhalls.ready if not base.has_buff(BuffId.QUEENSPAWNLARVATIMER)
-        ]
-        for queen in bot.units(U.QUEEN).ready:
-            if not available_bases:
-                break
-            if queen.orders or AbilityId.EFFECT_INJECTLARVA not in abilities_by_tag.get(
-                queen.tag, set()
-            ):
-                continue
-            base = min(available_bases, key=queen.distance_to)
-            queen(AbilityId.EFFECT_INJECTLARVA, base)
-            telemetry = getattr(bot, "telemetry", None)
-            if telemetry and telemetry.recorder.config.enabled:
-                telemetry.recorder.command_counts["INJECT"] += 1
-                telemetry.recorder.record(
-                    "command_attempt",
-                    bot.state.game_loop,
-                    tag=queen.tag,
-                    action="INJECT",
-                    reason="available_unbuffed_base",
-                )
-            available_bases.remove(base)
+    def rebalance_gas(self, bot, state):
+        if state.gas <= max(400, state.minerals * 1.5):
+            return
+        bases = [b for b in bot.townhalls.ready if b.surplus_harvesters < 0]
+        if not bases:
+            return
+        # The caller skips distribute_workers on these frames, so no worker gets two orders.
+        moved = set()
+        for gas in bot.gas_buildings.ready:
+            for worker in bot.workers:
+                if len(moved) >= 3:
+                    return
+                if (
+                    worker.tag in moved
+                    or not worker.is_gathering
+                    or worker.order_target != gas.tag
+                    or worker.is_carrying_vespene
+                ):
+                    continue
+                base = min(bases, key=worker.distance_to)
+                patches = bot.mineral_field.closer_than(10, base)
+                if patches:
+                    worker.gather(patches.closest_to(worker))
+                    moved.add(worker.tag)
+
+    async def try_macro(self, bot, home):
+        frame = bot.state.game_loop
+        if frame < self.next_macro_frame or not bot.can_afford(U.HATCHERY):
+            return False
+        self.next_macro_frame = frame + self.config.expansion_retry_frames
+        near = home.position.towards(bot.game_info.map_center, 11)
+        place = await bot.find_placement(
+            U.HATCHERY, near, max_distance=6, random_alternative=False, placement_step=2
+        )
+        if place is None or any(place.distance_to(p) < 8 for p in bot.expansion_locations_list):
+            return False
+        if bot.enemy_units.closer_than(15, place) or not bot.has_creep(place):
+            return False
+        submitted = await bot.build(
+            U.HATCHERY, near=place, max_distance=0, random_alternative=False, placement_step=1
+        )
+        self.expansion_event(bot, "macro_submitted" if submitted else "macro_rejected", place)
+        return submitted
 
     async def try_expand(self, bot):
         frame = bot.state.game_loop
