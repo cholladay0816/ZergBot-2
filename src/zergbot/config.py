@@ -15,7 +15,7 @@ class BotConfig:
     supply_buffer_max: int = 16
     expansion_retry_frames: int = 224
     attack_roaches: int = 12
-    regroup_roaches: int = 6
+    regroup_roaches: int = 11
     worker_defenders: int = 0
     search_expansions: bool = True
     max_bases: int = 3

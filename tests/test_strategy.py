@@ -2,7 +2,7 @@ from zergbot.agents import Action, CommandArbiter, Intent, Observation
 from zergbot.config import BotConfig
 from zergbot.strategy import ArmyStrategy
 
-C = BotConfig(worker_defenders=2)
+C = BotConfig(worker_defenders=2, regroup_roaches=6)
 
 
 def roster(count=15):
