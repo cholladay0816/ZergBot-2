@@ -275,5 +275,8 @@ def test_controller_preserves_inject_when_nearby_extra_defends_phoenix(tmp_path)
     first.assert_called_once_with(A.EFFECT_INJECTLARVA, base)
     first.attack.assert_not_called()
     extra.attack.assert_called_once_with(phoenix)
+    event = bot.telemetry.recorder.events[-1]
+    assert event["target_type"] == "PHOENIX"
+    assert event["target_position"] == [16, 10]
     extra.assert_not_called()
     bot.find_placement.assert_not_awaited()

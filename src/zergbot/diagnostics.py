@@ -51,7 +51,15 @@ EVENT_FIELDS = {
         "larvae",
         "threatened",
     },
-    "queen_decision": {"tag", "role", "action", "scope"},
+    "queen_decision": {
+        "tag",
+        "role",
+        "action",
+        "scope",
+        "target_tag",
+        "target_position",
+        "target_type",
+    },
     "muta_assessment": {
         "verdict",
         "advisory_only",

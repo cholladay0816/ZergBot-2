@@ -51,14 +51,23 @@ class QueenManager:
                 free.remove(queen)
         self.last_decisions = {k: v for k, v in self.last_decisions.items() if k in live_queens}
 
-    def event(self, bot, queen, action, role):
+    def event(self, bot, queen, action, role, target=None):
         recorder = bot.telemetry.recorder if bot.telemetry else None
         if recorder and recorder.config.enabled:
             if action in {"inject", "defend", "retreat", "creep"}:
                 recorder.command_counts[
                     "INJECT" if action == "inject" else "QUEEN_" + action.upper()
                 ] += 1
-            decision = (action, role)
+            target_tag = getattr(target, "tag", None)
+            target_type = getattr(target, "type_id", None)
+            position = getattr(target, "position", target)
+            target_position = list(position) if position is not None else None
+            decision = (
+                action,
+                role,
+                target_tag,
+                tuple(target_position) if target_tag is None and target_position else None,
+            )
             if self.last_decisions.get(queen.tag) != decision:
                 recorder.record(
                     "queen_decision",
@@ -67,6 +76,9 @@ class QueenManager:
                     role=role,
                     action=action,
                     scope="own_observed",
+                    target_tag=target_tag,
+                    target_position=target_position,
+                    target_type=target_type.name if isinstance(target_type, U) else None,
                 )
                 self.last_decisions[queen.tag] = decision
 
@@ -106,13 +118,17 @@ class QueenManager:
                 role=role,
                 can_creep=creep_budget and A.BUILD_CREEPTUMOR_QUEEN in available,
             )
+            target = None
             if action == "retreat":
                 enemy = direct.closest_to(queen)
-                queen.move(queen.position.towards(enemy.position, -5))
+                target = queen.position.towards(enemy.position, -5)
+                queen.move(target)
             elif action == "defend":
                 enemy = (direct or threats).closest_to(queen)
+                target = enemy
                 queen.attack(enemy)
             elif action == "inject":
+                target = base
                 queen(A.EFFECT_INJECTLARVA, base)
             elif action == "creep":
                 # At most one placement query/command per interval for the whole group.
@@ -127,12 +143,13 @@ class QueenManager:
                     random_alternative=False,
                 )
                 if place is not None and queen.distance_to(place) <= 10:
+                    target = place
                     queen(A.BUILD_CREEPTUMOR_QUEEN, place)
                 else:
                     action = "placement_unavailable"
             elif action == "rally" and queen.is_idle and queen.distance_to(base) > 10:
                 queen.move(base.position.towards(bot.game_info.map_center, 5))
-            self.event(bot, queen, action, role)
+            self.event(bot, queen, action, role, target)
         if creep_budget:
             for tumor in bot.structures(U.CREEPTUMORBURROWED).ready:
                 if A.BUILD_CREEPTUMOR_TUMOR not in abilities.get(tumor.tag, set()):
