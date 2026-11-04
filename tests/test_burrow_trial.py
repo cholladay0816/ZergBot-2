@@ -85,5 +85,15 @@ def test_observation_sample_and_death_use_real_allowlist_and_json(json_roundtrip
     bot.previous_own_types = {1: "ROACH"}
     asyncio.run(MeasuredBot.on_unit_destroyed(bot, 1))
     assert json_roundtrip(bot.events)[-1]["unit_type"] == "ROACH"
+    bot.record(
+        "burrow_tank",
+        tag=10,
+        own_cooldown=50.0,
+        own_target=1,
+        position=[14.0, 0.0],
+        visible_roaches=[1],
+    )
+    assert json_roundtrip(bot.events)[-1]["own_target"] == 1
+
     with pytest.raises(ValueError):
         bot.record("burrow_sample", password="secret")

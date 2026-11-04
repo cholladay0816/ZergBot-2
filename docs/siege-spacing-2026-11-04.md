@@ -72,3 +72,5 @@ The movement controller does not establish a composition solution to supported s
   - `scenario.SC2Replay` SHA256 `56406a41310f5331e423b4209de73008a8a3cc6c827a5d2198e1e41a2e41b1fc`
 
 All 6 guarded runs completed. Peak sampled host CPU was 32.0%; minimum available RAM was 5.79 GiB. Runs used below-normal priority, CPUs 20-23, and the 45-game/120-wall-second bounds. Raw evidence remains local under `.local-matches`.
+
+Scope clarification: these were friendly roaches versus tank/bio support, not the requested friendly ling/bane splash-spacing case. See [the corrected scope and follow-up tests](ling-bane-and-burrow-tank-2026-11-04.md); this failed roach experiment is not evidence against ling/bane splitting.
