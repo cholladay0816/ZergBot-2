@@ -4,6 +4,8 @@ from sc2.ids.ability_id import AbilityId as A
 from sc2.ids.buff_id import BuffId
 from sc2.ids.unit_typeid import UnitTypeId as U
 
+from .queen_micro import defend_motion, grenade_escape
+
 
 def queen_priority(
     *, critical, direct_threat, defending, casting, inject_due, can_inject, role, can_creep
@@ -54,7 +56,7 @@ class QueenManager:
     def event(self, bot, queen, action, role, target=None):
         recorder = bot.telemetry.recorder if bot.telemetry else None
         if recorder and recorder.config.enabled:
-            if action in {"inject", "defend", "retreat", "creep"}:
+            if action in {"inject", "defend", "retreat", "creep", "dodge", "kite"}:
                 recorder.command_counts[
                     "INJECT" if action == "inject" else "QUEEN_" + action.upper()
                 ] += 1
@@ -96,6 +98,14 @@ class QueenManager:
             base = roles.get(queen.tag) or min(bases, key=queen.distance_to)
             role = "inject" if queen.tag in roles else "defense_creep"
             available = abilities.get(queen.tag, set())
+            if self.config.queen_tactical_micro:
+                escape = grenade_escape(
+                    queen.position, queen.radius, bot.state.effects, bot.in_pathing_grid
+                )
+                if escape is not None:
+                    queen.move(escape)
+                    self.event(bot, queen, "dodge", role, escape)
+                    continue
             armed = (bot.enemy_units | bot.enemy_structures).filter(base_threat)
             threats = armed.closer_than(15, base)
             direct = armed.closer_than(7, queen).filter(
@@ -126,7 +136,23 @@ class QueenManager:
             elif action == "defend":
                 enemy = (direct or threats).closest_to(queen)
                 target = enemy
-                queen.attack(enemy)
+                motion = None
+                if self.config.queen_tactical_micro:
+                    attack_range = queen.air_range if enemy.is_flying else queen.ground_range
+                    motion = defend_motion(
+                        queen.position,
+                        base.position,
+                        enemy.position,
+                        queen.weapon_cooldown,
+                        attack_range,
+                        queen.radius + enemy.radius,
+                        bot.in_pathing_grid,
+                    )
+                if motion is not None:
+                    target, action = motion, "kite"
+                    queen.move(motion)
+                else:
+                    queen.attack(enemy)
             elif action == "inject":
                 target = base
                 queen(A.EFFECT_INJECTLARVA, base)

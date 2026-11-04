@@ -9,6 +9,7 @@ class BotConfig:
     morph_timeout_frames: int = 64
     burrow_escape_frames: int = 0
     avoid_detected_burrow: bool = False
+    queen_tactical_micro: bool = False
     adaptive_army: bool = False
     roach_tech: bool = False
     tech_min_workers: int = 32

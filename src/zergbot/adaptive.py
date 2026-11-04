@@ -1,5 +1,6 @@
 """Visible-evidence army adaptation and bounded early ling reconnaissance."""
 
+import numpy as np
 from sc2.ids.unit_typeid import UnitTypeId as U
 from sc2.position import Point2
 
@@ -53,6 +54,10 @@ class AdaptiveArmy:
 
     def event(self, bot, subject, reason, **values):
         telemetry = getattr(bot, "telemetry", None)
+        values = {
+            key: value.item() if isinstance(value, np.generic) else value
+            for key, value in values.items()
+        }
         signature = (reason, tuple(sorted(values.items())))
         if telemetry and self.last_events.get(subject) != signature:
             telemetry.recorder.record(
@@ -169,7 +174,7 @@ class AdaptiveArmy:
             "ling_pressure",
             "local_window" if self.pressure_ready else "scout_or_disengage",
             full_local_vision=bool(vision),
-            visible_workers=local_workers,
+            visible_workers=int(local_workers),
             armed_nearby=bool(danger),
         )
         approach = bot.enemy_start_locations[0].towards(bot.game_info.map_center, 10)

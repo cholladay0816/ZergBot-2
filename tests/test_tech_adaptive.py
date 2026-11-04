@@ -172,3 +172,16 @@ def test_tech_and_adaptive_events_serialize_with_bounds(tmp_path):
     data = json.loads((tmp_path / "match.json").read_text())
     assert sum(e["kind"] == "tech_step" for e in data["events"]) == 1
     assert any(e["kind"] == "adaptive_decision" for e in data["events"])
+
+
+def test_adaptive_live_numpy_counts_are_serializable(tmp_path):
+    import numpy as np
+
+    recorder = MatchDiagnostics(tmp_path, {})
+    bot = bot_stub()
+    bot.telemetry = SimpleNamespace(recorder=recorder)
+    # Live distance comparisons can produce numpy bools, whose sum is int64.
+    count = sum([np.bool_(True), np.bool_(True)])
+    AdaptiveArmy(C).event(bot, "ling_pressure", "scout_or_disengage", visible_workers=count)
+    recorder.finish(termination="test")
+    assert json.loads((tmp_path / "match.json").read_text())["events"][0]["visible_workers"] == 2

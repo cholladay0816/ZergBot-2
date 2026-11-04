@@ -18,6 +18,11 @@ def main() -> None:
     )
     parser.add_argument("--realtime", action="store_true")
     parser.add_argument(
+        "--queen-tactical-micro",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.queen_tactical_micro,
+    )
+    parser.add_argument(
         "--adaptive-army", action=argparse.BooleanOptionalAction, default=defaults.adaptive_army
     )
     parser.add_argument(
@@ -124,6 +129,7 @@ def main() -> None:
             burrow_escape_frames=args.burrow_escape_frames,
             roach_tech=args.roach_tech,
             adaptive_army=args.adaptive_army,
+            queen_tactical_micro=args.queen_tactical_micro,
             tech_min_workers=args.tech_min_workers,
             avoid_detected_burrow=args.avoid_detected_burrow,
         )
