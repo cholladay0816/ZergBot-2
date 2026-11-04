@@ -21,6 +21,27 @@ def main() -> None:
         "--difficulty", choices=["Easy", "Medium", "Hard", "Harder"], default="Hard"
     )
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--opponent", choices=["Terran", "Protoss", "Zerg"], default="Terran")
+    for field in (
+        "workers",
+        "extra_queens",
+        "extra_queens_after_bases",
+        "macro_hatches",
+        "macro_after_bases",
+        "macro_min_workers",
+        "macro_min_minerals",
+    ):
+        parser.add_argument(
+            "--" + field.replace("_", "-"), type=int, default=getattr(defaults, field)
+        )
+    parser.add_argument(
+        "--scouting", action=argparse.BooleanOptionalAction, default=defaults.scouting
+    )
+    parser.add_argument(
+        "--adaptive-economy",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.adaptive_economy,
+    )
     parser.add_argument(
         "--search-expansions",
         action=argparse.BooleanOptionalAction,
@@ -60,6 +81,15 @@ def main() -> None:
     try:
         config = BotConfig(
             random_seed=args.seed,
+            workers=args.workers,
+            extra_queens=args.extra_queens,
+            extra_queens_after_bases=args.extra_queens_after_bases,
+            macro_hatches=args.macro_hatches,
+            macro_after_bases=args.macro_after_bases,
+            macro_min_workers=args.macro_min_workers,
+            macro_min_minerals=args.macro_min_minerals,
+            scouting=args.scouting,
+            adaptive_economy=args.adaptive_economy,
             search_expansions=args.search_expansions,
             worker_defenders=args.worker_defenders,
             regroup_roaches=args.regroup_roaches,
@@ -83,6 +113,7 @@ def main() -> None:
         {
             "map": Path(args.map).stem,
             "difficulty": args.difficulty,
+            "opponent_race": args.opponent,
             "seed": args.seed,
             "realtime": args.realtime,
             "game_limit_seconds": args.game_time_limit,
@@ -110,7 +141,7 @@ def main() -> None:
                     Race.Zerg,
                     ZergBot(config=config, diagnostics=recorder),
                 ),
-                Computer(Race.Terran, Difficulty[args.difficulty]),
+                Computer(Race[args.opponent], Difficulty[args.difficulty]),
             ],
             realtime=args.realtime,
             random_seed=args.seed,

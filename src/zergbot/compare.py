@@ -7,6 +7,7 @@ from pathlib import Path
 from statistics import mean
 
 MATCH_KEYS = (
+    "opponent_race",
     "map",
     "difficulty",
     "seed",

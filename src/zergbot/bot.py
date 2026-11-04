@@ -11,6 +11,7 @@ from .config import BotConfig
 from .economy import Economy
 from .integration import SC2UnitGateway
 from .queens import QueenManager
+from .scouting import ScoutManager
 from .search import ExpansionSearch
 from .strategy import ArmyStrategy
 from .telemetry import TelemetryAdapter
@@ -27,6 +28,7 @@ class ZergBot(BotAI):
         self.search = ExpansionSearch()
         self.economy = Economy(self.config)
         self.queens = QueenManager(self.config)
+        self.scouting = ScoutManager(self.config)
 
     async def on_start(self) -> None:
         try:
@@ -65,6 +67,7 @@ class ZergBot(BotAI):
             + list(self.structures(UnitTypeId.CREEPTUMORBURROWED).ready)
         )
         await self.queens.step(self, self.gateway.abilities_by_tag)
+        self.scouting.step(self)
         self.registry.sync(observations)
         arbiter = CommandArbiter()
         retreat = (
@@ -158,6 +161,7 @@ class ZergBot(BotAI):
             )
 
     async def on_unit_destroyed(self, unit_tag):
+        self.scouting.destroyed(unit_tag)
         if self.telemetry:
             self.telemetry.destroyed(self.state.game_loop, unit_tag)
 

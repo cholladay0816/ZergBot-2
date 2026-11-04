@@ -43,8 +43,10 @@ class QueenManager:
     def event(self, bot, queen, action, role):
         recorder = bot.telemetry.recorder if bot.telemetry else None
         if recorder and recorder.config.enabled:
-            if action not in {"wait", "rally"}:
-                recorder.command_counts["QUEEN_" + action.upper()] += 1
+            if action in {"inject", "defend", "retreat", "creep"}:
+                recorder.command_counts[
+                    "INJECT" if action == "inject" else "QUEEN_" + action.upper()
+                ] += 1
             decision = (action, role)
             if self.last_decisions.get(queen.tag) != decision:
                 recorder.record(

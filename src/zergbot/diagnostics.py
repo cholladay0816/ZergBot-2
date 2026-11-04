@@ -39,6 +39,19 @@ class DiagnosticConfig:
 # Values are built from explicit numeric/enum game fields at the adapter boundary.
 # Unknown fields are rejected rather than accidentally logging object reprs or secrets.
 EVENT_FIELDS = {
+    "queen_decision": {"tag", "role", "action", "scope"},
+    "muta_assessment": {
+        "verdict",
+        "advisory_only",
+        "target",
+        "age_frames",
+        "coverage",
+        "confirmations",
+        "visible_workers",
+        "remembered_local_aa",
+        "remembered_mobile_counter",
+        "scope",
+    },
     "search_waypoint": {"previous", "target", "route_index", "reason", "scope"},
     "expansion": {"reason", "location"},
     "snapshot": {
@@ -85,6 +98,7 @@ EVENT_FIELDS = {
     "end": {"outcome", "termination", "error_type"},
 }
 META_FIELDS = {
+    "opponent_race",
     "map",
     "difficulty",
     "seed",
