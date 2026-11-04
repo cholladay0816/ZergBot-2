@@ -21,6 +21,7 @@ from sc2.position import Point2
 
 from .adept_micro import AdeptHarass
 from .config import BotConfig
+from .diversion import LingDiversion, defend_workers
 from .harass_micro import HellionHarass, validate_harass_event
 from .queens import QueenManager
 from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_position
@@ -193,7 +194,9 @@ class Defender(MeasuredBot):
         if not self.in_pathing_grid(attack):
             attack = base.towards(self.game_info.map_center, 16)
         commands = [] if self.options.scenario == "tank" else [(U.QUEEN, 1, queen, 1)]
-        if self.options.scenario == "reaper":
+        if self.options.scenario == "diversion":
+            commands = [(U.HELLION, 2, queen, 1), (U.ZERGLING, 12, attack, 2)]
+        elif self.options.scenario == "reaper":
             commands.append((U.REAPER, 1, attack, 2))
         elif self.options.scenario == "hellion":
             commands.append((U.HELLION, 2, attack, 2))
@@ -237,6 +240,14 @@ class Defender(MeasuredBot):
         self.begin_frame()
         if self.options.scenario == "tank":
             self.tank_defense()
+        if self.options.scenario == "diversion":
+            defend_workers(
+                self,
+                list(self.units(U.HELLION)),
+                list(self.enemy_units(U.ZERGLING)),
+                self.workers,
+                self.start_location,
+            )
         queens = list(self.units(U.QUEEN))
         abilities = await self.get_available_abilities(queens) if queens else []
         reserved = set()
@@ -440,6 +451,7 @@ class Attacker(MeasuredBot):
         super().__init__(options, output, setup_barrier)
         self.retreating = False
         self.hellion_controller = HellionHarass()
+        self.diversion_controller = LingDiversion()
         self.adept_controller = AdeptHarass(options.adept_mode)
         self.previous_enemy = {}
         self.next_build = 0
@@ -456,7 +468,17 @@ class Attacker(MeasuredBot):
         workers = [u for u in self.enemy_units if u.type_id in {U.DRONE, U.SCV, U.PROBE}]
         queens = list(self.enemy_units(U.QUEEN))
         home = self.enemy_start_locations[0]
-        if self.options.scenario == "reaper":
+        if self.options.scenario == "diversion":
+            await self.diversion_controller.step(
+                self,
+                list(self.units(U.ZERGLING)),
+                workers,
+                list(self.enemy_units(U.HELLION)),
+                home,
+                self.options.ling_split,
+                self.options.approach,
+            )
+        elif self.options.scenario == "reaper":
             for reaper in self.units(U.REAPER):
                 await self.reaper_step(reaper, workers, queens, home)
         elif self.options.scenario == "adept":
@@ -672,12 +694,13 @@ def main():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
         "--scenario",
-        choices=["reaper", "lings", "cannon", "tank", "hellion", "adept"],
+        choices=["reaper", "lings", "cannon", "tank", "hellion", "adept", "diversion"],
         required=True,
     )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
+    parser.add_argument("--ling-split", action="store_true")
     parser.add_argument("--shade-guard", action="store_true")
     parser.add_argument("--worker-safety", action="store_true")
     parser.add_argument("--worker-defense-count", type=int, choices=range(1, 13), default=6)
@@ -723,12 +746,12 @@ def main():
         run_game(
             maps.get(args.map),
             [
-                Bot(Race.Zerg, defender),
+                Bot(Race.Terran if args.scenario == "diversion" else Race.Zerg, defender),
                 Bot(
                     Race.Protoss
                     if args.scenario in {"cannon", "adept"}
                     else Race.Zerg
-                    if args.scenario == "lings"
+                    if args.scenario in {"lings", "diversion"}
                     else Race.Terran,
                     attacker,
                 ),

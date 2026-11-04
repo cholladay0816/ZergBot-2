@@ -5,6 +5,23 @@ import math
 from sc2.position import Point2
 
 HARASS_EVENT_FIELDS = {
+    "hellion_diversion": {
+        "tag",
+        "reason",
+        "position",
+        "health",
+        "target_tag",
+        "worker_distance",
+        "stage",
+    },
+    "hellion_defense": {
+        "tag",
+        "reason",
+        "position",
+        "own_cooldown",
+        "target_tag",
+        "worker_distance",
+    },
     "adept_guard": {"tag", "target_position", "moved", "scope"},
     "hellion_route": {"tag", "target", "query_distance", "scope"},
     "hellion_decision": {
