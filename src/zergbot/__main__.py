@@ -98,6 +98,9 @@ def main() -> None:
     parser.add_argument("--no-diagnostics", action="store_true")
     parser.add_argument("--sample-frames", type=int, default=112)
     parser.add_argument("--max-events", type=int, default=10000)
+    parser.add_argument(
+        "--opening-supply", action=argparse.BooleanOptionalAction, default=defaults.opening_supply
+    )
     args = parser.parse_args()
     if not 0 <= args.seed < 2**32:
         parser.error("Seed must be in [0, 2**32)")
@@ -128,6 +131,7 @@ def main() -> None:
             regroup_roaches=args.regroup_roaches,
             burrow_escape_frames=args.burrow_escape_frames,
             roach_tech=args.roach_tech,
+            opening_supply=args.opening_supply,
             adaptive_army=args.adaptive_army,
             queen_tactical_micro=args.queen_tactical_micro,
             tech_min_workers=args.tech_min_workers,

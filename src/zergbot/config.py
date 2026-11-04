@@ -12,6 +12,7 @@ class BotConfig:
     queen_tactical_micro: bool = False
     adaptive_army: bool = False
     roach_tech: bool = False
+    opening_supply: bool = False
     tech_min_workers: int = 32
     workers: int = 66
     defensive_roaches: int = 6
