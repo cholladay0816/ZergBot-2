@@ -328,6 +328,62 @@ def write_artifacts(directory, payload):
             f"- {item['finding']}. Evidence: {item['event_ids']}.",
             f"  Next experiment: {item['next_experiment']}",
         ]
+    lines += [
+        "",
+        "## Economy timeline (retained samples)",
+        "",
+        "| Game seconds | Minerals | Gas | Workers | Supply | Larvae | Roaches |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    last_bucket = -1
+    for event in payload["events"]:
+        if event["kind"] != "snapshot":
+            continue
+        bucket = int(event["game_seconds"] // 60)
+        if bucket == last_bucket:
+            continue
+        last_bucket = bucket
+        economy = event["economy"]
+        count = event.get("own_counts", {})
+        roaches = count.get("ROACH", 0) + count.get("ROACHBURROWED", 0)
+        lines.append(
+            f"| {event['game_seconds']:.1f} | {economy['minerals']} | "
+            f"{economy.get('vespene')} | {economy.get('workers')} | "
+            f"{economy.get('supply_used')}/{economy['supply_cap']} | "
+            f"{economy.get('larvae')} | {roaches} |"
+        )
+    morphs = Counter(
+        e["unit_type"]
+        for e in payload["events"]
+        if e["kind"] == "type_changed" and e["unit_type"] in {"ROACH", "ROACHBURROWED"}
+    )
+    losses = Counter(
+        e.get("unit_type") or "unknown"
+        for e in payload["events"]
+        if e["kind"] == "destroyed" and e["scope"] == "own"
+    )
+    lines += [
+        "",
+        "## Command and observation evidence",
+        "",
+        f"Attempt counts (not confirmations): {payload.get('command_attempt_counts', {})}.",
+        f"Observed roach type transitions in retained events: {dict(morphs)}.",
+        f"Own destruction-event types: {dict(losses)}. These may include worker "
+        "consumption for construction, not just combat kills.",
+    ]
+    for event in payload["events"]:
+        if event["kind"] == "action_error":
+            lines.append(
+                f"- Event {event['id']} at {event['game_seconds']:.2f}s: "
+                f"unit {event['tag']}, ability {event['ability_id']}, "
+                f"SC2 result code {event['result']}."
+            )
+    if (directory / "replay-analysis-report.md").exists():
+        lines += [
+            "",
+            "Separate post-game evidence: [replay analysis](replay-analysis-report.md). "
+            "This was not available to the live bot.",
+        ]
     for name, content in [
         ("match.json", json.dumps(payload, indent=2, allow_nan=False)),
         ("report.md", "\n".join(lines) + "\n"),

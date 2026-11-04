@@ -144,11 +144,38 @@ are not treated as a universal damage bonus.
 Enemy detail is restricted to **currently visible units**. Enemy orders, cooldowns
 and engaged-target fields are null because the protocol does not populate them.
 Missing optional fields remain null; snapshots under fog are excluded. No enemy
-economy, unseen casts, or total opponent visibility is invented. A future separate
-replay/observer pass with disabled fog can expand post-match evidence, but has not
-been implemented or fed into competitive decisions. Chat, environment variables,
+economy, unseen casts, or total opponent visibility is invented. A separate post-game
+replay pass with disabled fog expands evidence from both player perspectives;
+it is never imported or fed into competitive decisions. Chat, environment variables,
 credentials and arbitrary object/exception representations are not captured.
 
 Reports propose controlled next experiments tied to event IDs. Compare the same
 map, seed and difficulty, inspect replay alongside telemetry, change one behavior,
 and compare multiple runs before drawing causal conclusions from win/loss results.
+
+
+### Separate replay intelligence
+
+```powershell
+.\.venv\Scripts\python.exe -m zergbot.replay_analysis .local-matches\MATCH-ID\match.SC2Replay
+```
+
+This launches the installed matching SC2 build for two sequential, fog-disabled,
+post-game observation passes. Outputs are `replay-perspective-1.json`,
+`replay-perspective-2.json` and `replay-analysis-report.md` beside the replay.
+Each player's economy/private orders are obtained in their own perspective, not
+invented from enemy protocol defaults. Unit details, effects, upgrades and sampled
+actions remain bounded (112-frame default step, 1,000 samples per pass, 192 detailed
+units per sample, 180-second combined wall timeout). Use CLI options to change
+those limits. Partial output records failure/timeout; sampled actions are not an
+exhaustive cast log. This needs the matching installed game/data version and does
+not replace exact causal damage instrumentation that the SC2 API does not expose.
+
+The longer live Hard-Terran seed-1 test ended in a normal **Defeat** after
+476.07 observed game seconds / 55.66 wall seconds (~8.55x including startup).
+It recorded nine actual burrows, six actual resurfacing transitions, and Burrow
+research at 218.57s. One hatchery placement was rejected with
+`CantBuildLocationInvalid`; no Python exception occurred. Retained evidence showed
+large mineral stockpiles and worker-heavy larva allocation before combat. These
+are starting points for controlled economy experiments, not proof of a single
+cause of defeat. Full match/replay/resource artifacts remain local.
