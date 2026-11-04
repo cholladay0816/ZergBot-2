@@ -91,3 +91,16 @@ def test_unreachable_flank_falls_back_without_hidden_worker_target(json_roundtri
     events = json_roundtrip(b.events)
     assert any(e["reason"] == "flank_unreachable_fallback" for e in events)
     assert all(e["target_tag"] is None for e in events)
+
+
+def test_role_assignment_waits_for_spawn_observation(json_roundtrip):
+    b = bot()
+    policy = LingDiversion()
+    home = Point2((0, 0))
+    asyncio.run(policy.step(b, [], [], [], home, True, 0))
+    assert policy.started is None and not policy.roles
+    b.state.game_loop = 4
+    lings = [Actor(i, (16, 16)) for i in range(12)]
+    asyncio.run(policy.step(b, lings, [], [Actor(200, (6, 6))], home, True, 0))
+    assert sum(policy.roles.values()) == 4
+    assert sum(e["reason"] == "visible_hellion_distraction" for e in json_roundtrip(b.events)) == 4

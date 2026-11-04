@@ -21,6 +21,8 @@ class LingDiversion:
 
     async def step(self, bot, lings, workers, hellions, home, split, approach):
         frame = bot.state.game_loop
+        if not lings:
+            return
         if self.started is None:
             self.started = frame
             self.roles = {u.tag: i < 4 for i, u in enumerate(sorted(lings, key=lambda u: u.tag))}
