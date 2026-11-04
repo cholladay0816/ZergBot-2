@@ -250,12 +250,14 @@ class Defender(MeasuredBot):
         ).closer_than(12, self.start_location)
         minerals = self.mineral_field.closer_than(12, self.start_location)
         if not threats or not minerals:
+            released = set()
             for worker in self.workers:
                 if worker.tag in self.worker_defenders and minerals:
                     worker.gather(minerals.closest_to(worker))
+                    released.add(worker.tag)
             self.worker_defenders.clear()
             self.worker_defense_start = None
-            return set()
+            return released
         if self.worker_defense_start is None:
             self.worker_defense_start = self.state.game_loop
         selected = {
