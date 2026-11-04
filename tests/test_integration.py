@@ -208,22 +208,31 @@ def test_startup_failure_survives_library_defeat_conversion_without_error_text(t
     assert "SECRET_TOKEN" not in json.dumps(payload)
 
 
-def test_construction_and_production_events_distinguish_completion():
+def test_construction_and_production_events_distinguish_completion(tmp_path):
+    import json
+
+    from zergbot.diagnostics import MatchDiagnostics
     from zergbot.economy import Economy
 
-    recorder = Mock()
+    recorder = MatchDiagnostics(tmp_path, {})
     bot = SimpleNamespace(
         telemetry=SimpleNamespace(recorder=recorder), state=SimpleNamespace(game_loop=123)
     )
     building = SimpleNamespace(tag=7, type_id=U.SPAWNINGPOOL)
     asyncio.run(ZergBot.on_building_construction_started(bot, building))
+    bot.state.game_loop = 224
     asyncio.run(ZergBot.on_building_construction_complete(bot, building))
+    bot.state.game_loop = 448
     Economy.production_event(bot, U.QUEEN, 1)
-    assert [call.args[0] for call in recorder.record.call_args_list] == [
+    bot.state.game_loop = 1120
+    asyncio.run(ZergBot.on_unit_created(bot, SimpleNamespace(tag=8, type_id=U.QUEEN)))
+    events = json.loads(json.dumps(recorder.payload()))["events"]
+    assert [e["kind"] for e in events] == [
         "construction_started",
         "construction_completed",
         "production_submitted",
+        "created",
     ]
-    assert (
-        recorder.record.call_args_list[-1].kwargs["scope"] == "own_command_attempt_not_completion"
-    )
+    assert [e["frame"] for e in events] == [123, 224, 448, 1120]
+    assert events[2]["scope"] == "own_command_attempt_not_completion"
+    assert events[3]["unit_type"] == "QUEEN"
