@@ -74,6 +74,17 @@ def replay_snapshot(response, perspective, cap=192):
                 "army_count",
             ]
         },
+        "economy_score": {
+            name: field(observation.score.score_details, name)
+            for name in (
+                "collected_minerals",
+                "collected_vespene",
+                "spent_minerals",
+                "spent_vespene",
+                "collection_rate_minerals",
+                "collection_rate_vespene",
+            )
+        },
         "own_counts": dict(Counter(unit_name(u.unit_type) for u in units if u.alliance == 1)),
         "visible_opponent_counts": dict(
             Counter(unit_name(u.unit_type) for u in units if u.alliance == 4)

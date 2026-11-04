@@ -50,3 +50,19 @@ def test_unknown_replay_unit_type_remains_unknown():
     from zergbot.replay_analysis import unit_name
 
     assert unit_name(999999) == "UNKNOWN_TYPE_999999"
+
+
+def test_score_presence_and_zero_are_distinct_and_strict_json_serializable(json_roundtrip):
+    response = sc2api_pb2.ResponseObservation()
+    response.observation.player_common.player_id = 1
+    empty = replay_snapshot(response, 1)
+    assert all(v is None for v in empty["economy_score"].values())
+    response.observation.score.score_details.collected_minerals = 1234
+    response.observation.score.score_details.collected_vespene = 0
+    response.observation.score.score_details.collection_rate_minerals = 900.5
+    sample = json_roundtrip(replay_snapshot(response, 1))
+    assert sample["economy_score"]["collected_minerals"] == 1234
+    assert sample["economy_score"]["collected_vespene"] == 0
+    assert sample["economy_score"]["collection_rate_minerals"] == 900.5
+    assert sample["economy_score"]["collection_rate_vespene"] is None
+    assert sample["actual_player_id"] == 1
