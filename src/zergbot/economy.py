@@ -18,7 +18,8 @@ def needs_overlord(supply_left, supply_cap, pending_overlords, ready_bases, conf
         max(config.supply_buffer_min, 4 + config.supply_buffer_per_base * ready_bases),
     )
     if config.opening_supply and ready_bases == 1 and supply_cap <= 22:
-        buffer = 2  # 12-worker start: first drone, then 13-supply Overlord.
+        # First drone before the 13-supply Overlord; then allow queen/larva lead time.
+        buffer = 2 if supply_cap <= 14 else 4
     projected_left = supply_left + 8 * pending_overlords
     return projected_left < buffer
 
