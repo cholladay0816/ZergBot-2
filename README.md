@@ -136,7 +136,7 @@ Partial replay passes retain their own failure/timeout artifacts.
 
 ## Validation and remaining work
 
-The November 4, 2026 checkpoint passed **256 offline tests**, lint/format checks,
+The November 5, 2026 checkpoint passed **270 offline tests**, lint/format checks,
 compilation, dependency checks and wheel validation. Tests cover pure decisions,
 morph continuity/timeouts, capability fallbacks, command arbitration, real SC2 command
 construction, economy priorities, diagnostic bounds/privacy, replay provenance, CLI
@@ -183,3 +183,5 @@ The [third-base budget experiment](docs/third-base-budget-2026-11-04.md) complet
 The corrected [ling/baneling tank scenarios and real-research roach timing matrix](docs/ling-bane-and-burrow-tank-2026-11-04.md) distinguish the requested split test from the separate roach-spacing experiment. Both remain experimental.
 
 The [two-/three-tank matched ling/bane comparison](docs/multi-tank-spacing-2026-11-05.md) records losses, health, removal timing and splash-attribution limits; the current split remains disabled.
+
+The [damage inference and cliff-vision ledger](docs/cliff-vision-inference-2026-11-05.md) records the conservative observation model, failed hidden-source setup checks, matched controls and damage-time correction. This policy remains scenario-only and is not live-validated for locating an unseen tank.
