@@ -49,13 +49,13 @@ def choose_cliff(bot, approach):
             level = bot.get_terrain_height(low)
             if not is_plateau(bot, low, 3):
                 continue
-            for separation in (7.5, 9.5):
+            for separation in (13.5,):
                 for i in range(8):
                     direction = Point2((math.cos(i * math.pi / 4), math.sin(i * math.pi / 4)))
-                    high, flyer = low + direction * separation, low - direction * 18
+                    high, flyer = low + direction * separation, low - direction * 12
                     if not in_bounds(bot, flyer) or not bot.in_pathing_grid(high):
                         continue
-                    if bot.get_terrain_height(high) < level + 32 or not is_plateau(bot, high, 1):
+                    if bot.get_terrain_height(high) < level + 16 or not is_plateau(bot, high, 1):
                         continue
                     if any(n.distance_to(high) < 2 for n in neutrals):
                         continue
@@ -80,6 +80,14 @@ def choose_cliff(bot, approach):
 
 
 async def setup(bot):
+    import numpy as np
+
+    if hasattr(bot.game_info, "terrain_height"):
+        np.savez_compressed(
+            bot.output / "map-grids.npz",
+            terrain=bot.game_info.terrain_height.data_numpy,
+            pathing=bot.game_info.pathing_grid.data_numpy,
+        )
     low, high, flyer = choose_cliff(bot, bot.options.approach)
     commands = [
         (U.HYDRALISK, 12, low, 1),
@@ -140,6 +148,8 @@ def defender_step(bot):
                     health=float(u.health),
                     position=[float(v) for v in u.position],
                     height=int(bot.get_terrain_height(u.position)),
+                    sight_range=float(u.sight_range),
+                    ground_range=float(u.ground_range),
                 )
                 for u in hydras
             ],
@@ -174,6 +184,8 @@ def attacker_step(bot):
             health=float(tank.health),
             own_cooldown=float(tank.weapon_cooldown),
             visible_hydras=len(targets),
+            sight_range=float(tank.sight_range),
+            ground_range=float(tank.ground_range),
         )
     for marine in bot.units(U.MARINE):
         flyers = list(bot.enemy_units(U.OVERSEER).visible)

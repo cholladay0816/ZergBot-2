@@ -104,6 +104,8 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
         tag=np.int64(2),
         type_id=U.HYDRALISK,
         health=np.float32(80),
+        sight_range=9,
+        ground_range=5,
         position=Point2((0, 0)),
         hold_position=Mock(),
     )
