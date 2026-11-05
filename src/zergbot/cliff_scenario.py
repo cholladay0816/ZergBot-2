@@ -142,29 +142,49 @@ def defender_step(bot):
         elif hydra.tag not in bot.vision_held:
             hydra.hold_position()
         bot.vision_held.add(hydra.tag)
+    retain = getattr(bot.options, "vision_retain", False)
+    if retain:
+        bot.vision_memory.observe(enemies, hydras, bot.state.game_loop)
     reason = "baseline_hold"
     if bot.options.controller == "micro":
-        flyer, target, reason = bot.vision_assist.decide(
-            flyers,
-            enemies,
-            bot.state.game_loop,
-            bot.get_terrain_height,
-            lambda p: in_bounds(bot, p),
-        )
+        if retain:
+            flyer, target, reason = bot.vision_memory.decide(
+                flyers,
+                enemies,
+                hydras,
+                bot.state.game_loop,
+                bot.is_visible,
+                lambda p: in_bounds(bot, p),
+            )
+        else:
+            flyer, target, reason = bot.vision_assist.decide(
+                flyers,
+                enemies,
+                bot.state.game_loop,
+                bot.get_terrain_height,
+                lambda p: in_bounds(bot, p),
+            )
         if flyer is not None and target is not None:
             flyer.move(target)
+    policy = bot.vision_memory if retain else bot.vision_assist
     if reason != bot.vision_reason:
         bot.record(
             "vision_decision",
             reason=reason,
-            target=[float(v) for v in bot.vision_assist.target]
-            if bot.vision_assist.target
-            else None,
+            target=[float(v) for v in policy.target] if policy.target else None,
         )
         bot.vision_reason = reason
     if bot.sample_due("vision", bot.state.game_loop, 4):
         bot.record(
             "vision_sample",
+            remembered=dict(
+                tag=bot.vision_memory.seen.tag,
+                position=list(bot.vision_memory.seen.position),
+                last_seen_frame=bot.vision_memory.seen.frame,
+                terrain_visible=bool(bot.is_visible(bot.vision_memory.seen.position)),
+            )
+            if retain and bot.vision_memory.seen
+            else None,
             hydras=[
                 dict(
                     tag=int(u.tag),
@@ -188,6 +208,7 @@ def defender_step(bot):
                     unit_type=e.type_id.name,
                     health=float(e.health),
                     position=[float(v) for v in e.position],
+                    terrain_visible=bool(bot.is_visible(e.position)),
                 )
                 for e in enemies
             ],

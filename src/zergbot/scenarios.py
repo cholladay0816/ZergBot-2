@@ -33,6 +33,7 @@ from .shade_guard import guard_queen
 from .siege_spacing import SiegeSpacing, spacing_sample
 from .tank_micro import split_waypoint
 from .vision_assist import VisionAssist
+from .vision_memory import VisionMemory
 from .worker_safety import worker_action
 
 
@@ -235,6 +236,7 @@ class Defender(MeasuredBot):
         self.split_slots = {}
         self.burrow_trial = BurrowTrial()
         self.vision_assist = VisionAssist()
+        self.vision_memory = VisionMemory()
         self.vision_held = set()
         self.vision_reason = None
 
@@ -885,6 +887,7 @@ def main():
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
     parser.add_argument("--vision-aa", action="store_true")
     parser.add_argument("--vision-spotter", action="store_true")
+    parser.add_argument("--vision-retain", action="store_true")
     parser.add_argument("--tank-count", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--burrow-research", action="store_true")
     parser.add_argument("--burrow-tanks", type=int, choices=(1, 2, 3), default=1)
