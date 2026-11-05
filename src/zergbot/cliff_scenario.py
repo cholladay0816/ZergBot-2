@@ -55,7 +55,7 @@ def choose_cliff(bot, approach):
                     high, flyer = low + direction * separation, low - direction * 18
                     if not in_bounds(bot, flyer) or not bot.in_pathing_grid(high):
                         continue
-                    if bot.get_terrain_height(high) < level + 16 or not is_plateau(bot, high, 1):
+                    if bot.get_terrain_height(high) < level + 32 or not is_plateau(bot, high, 1):
                         continue
                     if any(n.distance_to(high) < 2 for n in neutrals):
                         continue
