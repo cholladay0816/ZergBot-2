@@ -79,6 +79,17 @@ def choose_cliff(bot, approach):
     raise ValueError("No suitable distinct high-ground scenario geometry")
 
 
+def ranged_formation(low, high):
+    """Setup-only formation: no Hydra is spawned closer than the low anchor."""
+    toward = (high - low).normalized
+    tangent = Point2((-toward.y, toward.x))
+    return [
+        low - toward * (row * 1.3) + tangent * ((col - 1.5) * 1.3)
+        for row in range(3)
+        for col in range(4)
+    ]
+
+
 async def setup(bot):
     import numpy as np
 
@@ -94,6 +105,17 @@ async def setup(bot):
         (U.OVERSEER, 1, flyer, 1),
         (U.SIEGETANKSIEGED, 1, high, 2),
     ]
+    if getattr(bot.options, "vision_spotter", False):
+        formation = ranged_formation(low, high)
+        if not all(
+            bot.in_pathing_grid(p) and bot.get_terrain_height(p) == bot.get_terrain_height(low)
+            for p in formation
+        ):
+            raise ValueError("Ranged Hydra formation crosses terrain or blocked cells")
+        commands = [(U.HYDRALISK, 1, p, 1) for p in formation] + commands[1:]
+        # A real owned spotter supplies ordinary player-2 vision; its information
+        # is never passed into the Zerg controller.
+        commands.append((U.OBSERVER, 1, low.towards(high, 3), 2))
     if bot.options.vision_aa:
         commands.append((U.MARINE, 2, high, 2))
     await bot.client.debug_create_unit(commands)
@@ -105,6 +127,7 @@ async def setup(bot):
         low_height=int(bot.get_terrain_height(low)),
         high_height=int(bot.get_terrain_height(high)),
         scope="evaluator_setup_only",
+        spotter=bool(getattr(bot.options, "vision_spotter", False)),
     )
 
 

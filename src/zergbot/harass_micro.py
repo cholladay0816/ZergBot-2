@@ -13,7 +13,8 @@ HARASS_EVENT_FIELDS = {
         "candidate_count",
         "assumptions",
     },
-    "vision_setup": {"low", "high", "flyer", "low_height", "high_height", "scope"},
+    "vision_setup": {"low", "high", "flyer", "low_height", "high_height", "scope", "spotter"},
+    "vision_damage_observation": {"tag", "position", "visible_enemies"},
     "vision_decision": {"reason", "target"},
     "vision_sample": {"hydras", "flyers", "visible_enemies"},
     "vision_weapon": {

@@ -131,6 +131,7 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
     assert {e["kind"] for e in events} >= {
         "vision_setup",
         "vision_inference",
+        "vision_damage_observation",
         "vision_decision",
         "vision_sample",
         "vision_weapon",
@@ -170,3 +171,11 @@ def test_visible_hit_does_not_become_unexplained_when_enemy_leaves_vision():
     # A genuinely new unexplained damage observation may still start a mission.
     p.observe_damage((0, 0), 22, height, lambda p: False, lambda p: True)
     assert p.decide([flyer()], [], 22, height, lambda p: True)[2] == "seek_high_ground_hypothesis"
+
+
+def test_ranged_formation_preserves_outer_range_and_unit_counts():
+    low, high = Point2((0, 0)), Point2((13.5, 0))
+    points = cliff_scenario.ranged_formation(low, high)
+    assert len(points) == len(set(points)) == 12
+    assert min(p.distance_to(high) for p in points) >= 13.5
+    assert min(a.distance_to(b) for a in points for b in points if a != b) >= 1.29

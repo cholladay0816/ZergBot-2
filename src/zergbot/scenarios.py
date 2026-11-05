@@ -150,6 +150,20 @@ class MeasuredBot(BotAI):
 
     async def on_unit_took_damage(self, unit, amount_damage_taken):
         if self.options.scenario == "cliff" and unit.type_id == U.HYDRALISK:
+            self.record(
+                "vision_damage_observation",
+                tag=int(unit.tag),
+                position=[float(v) for v in unit.position],
+                visible_enemies=[
+                    dict(
+                        tag=int(e.tag),
+                        unit_type=e.type_id.name,
+                        position=[float(v) for v in e.position],
+                    )
+                    for e in self.enemy_units
+                    if e.is_visible
+                ],
+            )
             self.vision_assist.observe_damage(
                 unit.position,
                 self.state.game_loop,
@@ -869,6 +883,7 @@ def main():
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
     parser.add_argument("--vision-aa", action="store_true")
+    parser.add_argument("--vision-spotter", action="store_true")
     parser.add_argument("--tank-count", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--burrow-research", action="store_true")
     parser.add_argument("--burrow-tanks", type=int, choices=(1, 2, 3), default=1)
