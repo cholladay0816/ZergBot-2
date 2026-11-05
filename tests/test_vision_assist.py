@@ -84,6 +84,7 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
         counts=Counter(),
         damage=Counter(),
         client=NS(debug_create_unit=AsyncMock()),
+        enemy_units=[],
         get_terrain_height=height,
         is_visible=lambda p: p.x < 2,
         game_info=NS(playable_area=NS(x=-100, y=-100, width=200, height=200)),
@@ -157,3 +158,15 @@ def test_obtained_vision_does_not_extend_bounded_flyer_assignment():
     )
     assert p.decide([u], [enemy], 14, height, lambda p: True)[2] == "vision_obtained"
     assert p.decide([u], [enemy], 234, height, lambda p: True)[2] == "timeout"
+
+
+def test_visible_hit_does_not_become_unexplained_when_enemy_leaves_vision():
+    p = prepare()
+    p.observe_damage(
+        (0, 0), 14, height, lambda p: False, lambda p: True, visible_ground_threat=True
+    )
+    assert p.region is None
+    assert p.decide([flyer()], [], 18, height, lambda p: True)[2] == "no_unexplained_damage"
+    # A genuinely new unexplained damage observation may still start a mission.
+    p.observe_damage((0, 0), 22, height, lambda p: False, lambda p: True)
+    assert p.decide([flyer()], [], 22, height, lambda p: True)[2] == "seek_high_ground_hypothesis"

@@ -156,6 +156,12 @@ class MeasuredBot(BotAI):
                 self.get_terrain_height,
                 self.is_visible,
                 lambda point: cliff_scenario.in_bounds(self, point),
+                visible_ground_threat=any(
+                    e.is_visible
+                    and e.can_attack_ground
+                    and e.position.distance_to(unit.position) <= 18
+                    for e in self.enemy_units
+                ),
             )
             region = self.vision_assist.region
             if region is not None and self.vision_assist.started is None:

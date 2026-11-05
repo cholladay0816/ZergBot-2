@@ -46,7 +46,21 @@ class VisionAssist:
         self.finished = False
         self.region = None
 
-    def observe_damage(self, position, frame, height=None, visible=None, in_bounds=None):
+    def observe_damage(
+        self,
+        position,
+        frame,
+        height=None,
+        visible=None,
+        in_bounds=None,
+        visible_ground_threat=False,
+    ):
+        if visible_ground_threat and self.started is None:
+            # A possible visible source is not confirmed attribution. However,
+            # losing sight later must not relabel this hit as unexplained.
+            self.damage_position, self.region = None, None
+            self.damage_frame = frame
+            return
         if self.started is not None or self.finished or frame == self.damage_frame:
             return
         self.damage_position, self.damage_frame = Point2(position), frame
