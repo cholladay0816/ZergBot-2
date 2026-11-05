@@ -109,3 +109,33 @@ All raw artifacts and replays remain local under `G:\Github Projects\ZergBot-2\.
   - `player-2.json` SHA-256 `f43c71facb5361b0195a6ad91fc30fe2a6230daccbb2c97ecde3bb8c3e67b6b9`
   - `scenario.SC2Replay` SHA-256 `7b90448c5707d67978022cd028bceb800a74755437a5a64a48e14e527af32d07`
   - `settings.json` SHA-256 `7fd03152c5a4a3a90831455a3950dd7e100915d10f6f2bb12080f43dc0d510b5`
+
+## Follow-up: outer-range fire with a normal spotter
+
+The requested precondition was checked again using `--vision-spotter`. Setup creates a player-2 Observer supplying normal shared vision and places the 12 Hydras individually in a formation whose closest center is at least 13.5 units from the tank anchor. This is an isolated mixed-race debug setup, not a standard Terran composition. It changes spotting/geometry, not the engine fog rules. No hidden information is passed to Zerg.
+
+The first damage callback now records the defender's actual visible enemy list; subsequent instrumentation separately records terrain visibility at each visible enemy position. The batch refuses to proceed to a candidate trial if the tank is already visible in that first callback. No result below qualifies as a successful hidden-source scouting trial.
+
+| Position | Revision | First damage loop | Tank visible in callback | Tank terrain visible | Survivors / HP at cap | Tank death loop |
+|---|---|---|---|---|---|---|
+| 0 | `5901623` | 25 | True | not recorded | 11 / 571.9 | [393] |
+| 1 | `21037b3` | 14 | True | False | 9 / 463.5 | [318] |
+
+At position 1, the legal callback contained the firing tank while `is_visible(tank.position)` was false: enemy-unit reveal and terrain vision are distinct. Maintaining vision after a temporary unit reveal is a meaningful separate scenario, but was not substituted for the requested hidden-unit-at-first-hit condition.
+
+Scouting latency and vision-enabled threat resolution are **not scored** because both preconditions failed; candidate runs were skipped. Survival and tank removal are included only as setup diagnostics, not scouting improvements. The lack of a hidden firing unit in these tested settings is an unresolved scenario constraint, not evidence that all possible SC2 setups behave identically. No cloak, altered vision statistics, withheld observations or artificial damage were introduced to manufacture a passing result.
+
+271 tests, Ruff lint/format, compilation, pip checks, isolated wheel build and extracted-wheel imports passed. All production defaults remain unchanged.
+
+Follow-up resource samples: peak system CPU 19.2%; minimum available RAM 16.12 GiB. Both runs used the existing sequential below-normal CPU 20-23 controls and 45-game/120-wall-second caps.
+
+- `cliff-spotter-0-aa0-baseline`, revision `59016230f3ae4ed7665937f31a3ac9cd247a8ce2`, folder `scenario-20261105T213028Z-cliff-baseline0`; index `phase8-cliff-spotter-batch.json`.
+  - `player-1.json` SHA-256 `3f349984ccca9e62558a06576580951464d79ab05e96e85d96e751511310008b`
+  - `player-2.json` SHA-256 `8141f8c51a599f14996ba672c0febd68d04d7db69f6d438824dead8a7b56f763`
+  - `scenario.SC2Replay` SHA-256 `ad3a95e32d6dc879929f78bc2934ec54b7ea08eef3b9c1c792904de4dcd84175`
+  - `settings.json` SHA-256 `d2f73c379892957f71d6e06209d1f9ca64e55790216732b97cc01d7cb4a7c086`
+- `cliff-visibility-1-aa0-baseline`, revision `21037b38d3e4a4e1b2ffaeedc55feaea2070f419`, folder `scenario-20261105T213211Z-cliff-baseline1`; index `phase8-cliff-visibility-batch.json`.
+  - `player-1.json` SHA-256 `3d440c8564ebac1c2e2555c472921be8828ca46b53f5ddd46b27bc756e834691`
+  - `player-2.json` SHA-256 `4bf17eea9f6d61c98c99539e490a48c2f04e8ae6b013e8ced6e2f7f02e57fb32`
+  - `scenario.SC2Replay` SHA-256 `369830f02196de88a18de1a32e38b8799ef34e6ed181801ef822e7101d30ab52`
+  - `settings.json` SHA-256 `31bbdfcfbd4e3f3f757faf7d775fbbc5d9308e840b276fb6e03776570bdc3bc3`
