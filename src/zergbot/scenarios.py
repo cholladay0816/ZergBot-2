@@ -19,6 +19,7 @@ from sc2.main import run_game
 from sc2.player import Bot
 from sc2.position import Point2
 
+from . import cliff_scenario
 from .adept_micro import AdeptHarass
 from .agents import Action, AgentRegistry, CommandArbiter, Intent
 from .burrow_trial import BurrowTrial
@@ -31,6 +32,7 @@ from .scenario_geometry import grenade_score, mineral_ingress, predict_visible_p
 from .shade_guard import guard_queen
 from .siege_spacing import SiegeSpacing, spacing_sample
 from .tank_micro import split_waypoint
+from .vision_assist import VisionAssist
 from .worker_safety import worker_action
 
 
@@ -139,12 +141,33 @@ class MeasuredBot(BotAI):
         self.previous_own_types = {u.tag: u.type_id.name for u in self.units}
 
     async def on_unit_destroyed(self, tag):
+        if self.options.scenario == "cliff" and tag in self.previous_own_types:
+            self.record("vision_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
         if self.options.scenario == "tank" and tag in self.previous_own_types:
             self.record("siege_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
         if self.options.scenario == "burrow-tank" and tag in self.previous_own_types:
             self.record("burrow_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
 
     async def on_unit_took_damage(self, unit, amount_damage_taken):
+        if self.options.scenario == "cliff" and unit.type_id == U.HYDRALISK:
+            self.vision_assist.observe_damage(
+                unit.position,
+                self.state.game_loop,
+                self.get_terrain_height,
+                self.is_visible,
+                lambda point: cliff_scenario.in_bounds(self, point),
+            )
+            region = self.vision_assist.region
+            if region is not None and self.vision_assist.started is None:
+                self.record(
+                    "vision_inference",
+                    source_type=region.source_type,
+                    source_confirmed=region.source_confirmed,
+                    radius=region.radius,
+                    exhaustive=region.exhaustive,
+                    candidate_count=len(region.cells),
+                    assumptions=list(region.assumptions),
+                )
         self.damage[unit.type_id.name] += float(amount_damage_taken)
         self.record(
             "own_damage",
@@ -190,11 +213,18 @@ class Defender(MeasuredBot):
         self.split_start = None
         self.split_slots = {}
         self.burrow_trial = BurrowTrial()
+        self.vision_assist = VisionAssist()
+        self.vision_held = set()
+        self.vision_reason = None
 
     async def on_start(self):
         self.client.game_step = 4
         self.worker_tags = {u.tag for u in self.workers}
         await self.cleanup_ready()
+        if self.options.scenario == "cliff":
+            await cliff_scenario.setup(self)
+            await self.setup_ready()
+            return
         base = self.start_location
         queen = base.towards(self.game_info.map_center, 5)
         attack = approach_point(base, self.game_info.map_center, self.options.approach)
@@ -265,6 +295,10 @@ class Defender(MeasuredBot):
 
     async def on_step(self, iteration):
         self.begin_frame()
+        if self.options.scenario == "cliff":
+            cliff_scenario.defender_step(self)
+            self.end_frame()
+            return
         if self.options.scenario == "burrow-tank":
             await self.burrow_trial.step(self)
             self.end_frame()
@@ -532,6 +566,10 @@ class Attacker(MeasuredBot):
 
     async def on_step(self, iteration):
         self.begin_frame()
+        if self.options.scenario == "cliff":
+            cliff_scenario.attacker_step(self)
+            self.end_frame()
+            return
         workers = [u for u in self.enemy_units if u.type_id in {U.DRONE, U.SCV, U.PROBE}]
         queens = list(self.enemy_units(U.QUEEN))
         home = self.enemy_start_locations[0]
@@ -817,12 +855,14 @@ def main():
             "diversion",
             "roach-tank",
             "burrow-tank",
+            "cliff",
         ],
         required=True,
     )
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
+    parser.add_argument("--vision-aa", action="store_true")
     parser.add_argument("--tank-count", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--burrow-research", action="store_true")
     parser.add_argument("--burrow-tanks", type=int, choices=(1, 2, 3), default=1)
