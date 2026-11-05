@@ -49,18 +49,26 @@ def choose_cliff(bot, approach):
             level = bot.get_terrain_height(low)
             if not is_plateau(bot, low, 3):
                 continue
-            for i in range(8):
-                direction = Point2((math.cos(i * math.pi / 4), math.sin(i * math.pi / 4)))
-                high, flyer = low + direction * 5.5, low - direction * 18
-                if not in_bounds(bot, flyer) or not bot.in_pathing_grid(high):
-                    continue
-                if bot.get_terrain_height(high) < level + 16 or not is_plateau(bot, high, 1):
-                    continue
-                if any(n.distance_to(high) < 2 for n in neutrals):
-                    continue
-                found.append((low, high, flyer))
+            for separation in (7.5, 9.5):
+                for i in range(8):
+                    direction = Point2((math.cos(i * math.pi / 4), math.sin(i * math.pi / 4)))
+                    high, flyer = low + direction * separation, low - direction * 18
+                    if not in_bounds(bot, flyer) or not bot.in_pathing_grid(high):
+                        continue
+                    if bot.get_terrain_height(high) < level + 16 or not is_plateau(bot, high, 1):
+                        continue
+                    if any(n.distance_to(high) < 2 for n in neutrals):
+                        continue
+                    found.append((low, high, flyer))
     found.sort(
-        key=lambda p: (p[0].distance_to(bot.game_info.map_center), p[0].x, p[0].y, p[1].x, p[1].y)
+        key=lambda p: (
+            p[0].distance_to(bot.game_info.map_center),
+            p[0].distance_to(p[1]),
+            p[0].x,
+            p[0].y,
+            p[1].x,
+            p[1].y,
+        )
     )
     distinct = []
     for item in found:
