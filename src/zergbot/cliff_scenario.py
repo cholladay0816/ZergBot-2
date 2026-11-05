@@ -14,10 +14,27 @@ def in_bounds(bot, point):
     )
 
 
+def is_plateau(bot, point, radius):
+    level = bot.get_terrain_height(point)
+    offsets = [
+        (0, 0),
+        (radius, 0),
+        (-radius, 0),
+        (0, radius),
+        (0, -radius),
+        (radius * 0.7, radius * 0.7),
+        (-radius * 0.7, -radius * 0.7),
+    ]
+    return all(
+        bot.in_pathing_grid(point + Point2(offset))
+        and bot.get_terrain_height(point + Point2(offset)) == level
+        for offset in offsets
+    )
+
+
 def choose_cliff(bot, approach):
     area = bot.game_info.playable_area
     found = []
-    offsets = [(2, 0), (-2, 0), (0, 2), (0, -2), (1.5, 1.5), (-1.5, -1.5)]
     neutrals = list(bot.mineral_field) + list(bot.vespene_geyser)
     for x in range(int(area.x) + 22, int(area.x + area.width) - 22, 4):
         for y in range(int(area.y) + 22, int(area.y + area.height) - 22, 4):
@@ -30,18 +47,14 @@ def choose_cliff(bot, approach):
             if not bot.in_pathing_grid(low) or any(n.distance_to(low) < 4 for n in neutrals):
                 continue
             level = bot.get_terrain_height(low)
-            if any(
-                not bot.in_pathing_grid(low + Point2(d))
-                or bot.get_terrain_height(low + Point2(d)) != level
-                for d in offsets
-            ):
+            if not is_plateau(bot, low, 3):
                 continue
             for i in range(8):
                 direction = Point2((math.cos(i * math.pi / 4), math.sin(i * math.pi / 4)))
                 high, flyer = low + direction * 5.5, low - direction * 18
                 if not in_bounds(bot, flyer) or not bot.in_pathing_grid(high):
                     continue
-                if bot.get_terrain_height(high) <= level + 4:
+                if bot.get_terrain_height(high) < level + 16 or not is_plateau(bot, high, 1):
                     continue
                 if any(n.distance_to(high) < 2 for n in neutrals):
                     continue

@@ -26,7 +26,13 @@ def test_current_visibility_does_not_prove_source_absent_at_damage_time():
     profile = SourceBounds("known_nonhidden", 10, 0, 0, 0, 0, False)
     cells = [
         TerrainCell((1, 0), 0, True),
-        TerrainCell((2, 0), 0, True, visible_throughout_interval=True),
+        TerrainCell(
+            (2, 0),
+            0,
+            True,
+            visible_throughout_interval=True,
+            attacker_absent_throughout_interval=True,
+        ),
     ]
     assert len(infer_region(evidence, cells, profile).cells) == 1
     hidden = SourceBounds("possibly_hidden", 10, 0, 0, 0, 0, True)

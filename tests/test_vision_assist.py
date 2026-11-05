@@ -126,3 +126,12 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
     inferred = next(e for e in events if e["kind"] == "vision_inference")
     assert inferred["source_type"] is None and not inferred["source_confirmed"]
     assert not inferred["exhaustive"]
+
+
+def test_cliff_setup_rejects_slopes_and_blocked_plateaus():
+    bot = NS(get_terrain_height=lambda p: int(p.x * 8), in_pathing_grid=lambda p: True)
+    assert not cliff_scenario.is_plateau(bot, Point2((10, 10)), 1)
+    bot.get_terrain_height = lambda p: 191
+    assert cliff_scenario.is_plateau(bot, Point2((10, 10)), 3)
+    bot.in_pathing_grid = lambda p: p.x < 11
+    assert not cliff_scenario.is_plateau(bot, Point2((10, 10)), 3)

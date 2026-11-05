@@ -31,6 +31,7 @@ class TerrainCell:
     visible: bool
     detection_complete: bool = False
     visible_throughout_interval: bool = False
+    attacker_absent_throughout_interval: bool = False
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,7 @@ def infer_region(evidence, cells, source=None, search_radius=14):
             confirmed
             and cell.visible
             and cell.visible_throughout_interval
+            and cell.attacker_absent_throughout_interval
             and (not source.can_hide or cell.detection_complete)
         )
         if not excluded:
