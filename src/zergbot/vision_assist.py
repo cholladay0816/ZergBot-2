@@ -78,11 +78,11 @@ class VisionAssist:
                 return flyer, self.origin, "abort_visible_aa_or_damage"
             if self.finished:
                 return None, None, "finished"
-            if combat_visible:
-                return flyer, flyer.position, "vision_obtained"
             if frame - self.started >= 224:
                 self.finished = True
                 return flyer, self.origin, "timeout"
+            if combat_visible:
+                return flyer, flyer.position, "vision_obtained"
             if not air_path_safe(flyer.position, self.target, enemies):
                 self.finished = True
                 return flyer, self.origin, "abort_unsafe_route"

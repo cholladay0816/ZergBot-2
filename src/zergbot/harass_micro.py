@@ -17,6 +17,8 @@ HARASS_EVENT_FIELDS = {
     "vision_decision": {"reason", "target"},
     "vision_sample": {"hydras", "flyers", "visible_enemies"},
     "vision_weapon": {
+        "position",
+        "height",
         "tag",
         "health",
         "own_cooldown",

@@ -114,7 +114,17 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
     bot.units = lambda kind: [hydra] if kind == U.HYDRALISK else [u] if kind == U.OVERSEER else []
     bot.enemy_units = NS(visible=[])
     cliff_scenario.defender_step(bot)
-    bot.record("vision_weapon", tag=5, health=175.0, own_cooldown=0.0, visible_hydras=12)
+    bot.record(
+        "vision_weapon",
+        tag=5,
+        health=175.0,
+        own_cooldown=0.0,
+        visible_hydras=12,
+        position=[3.0, 4.0],
+        height=207,
+        sight_range=11.0,
+        ground_range=13.0,
+    )
     asyncio.run(MeasuredBot.on_unit_destroyed(bot, 5))
     events = json_roundtrip(bot.events)
     assert {e["kind"] for e in events} >= {
@@ -137,3 +147,13 @@ def test_cliff_setup_rejects_slopes_and_blocked_plateaus():
     assert cliff_scenario.is_plateau(bot, Point2((10, 10)), 3)
     bot.in_pathing_grid = lambda p: p.x < 11
     assert not cliff_scenario.is_plateau(bot, Point2((10, 10)), 3)
+
+
+def test_obtained_vision_does_not_extend_bounded_flyer_assignment():
+    u, p = flyer(), prepare()
+    p.decide([u], [], 10, height, lambda p: True)
+    enemy = NS(
+        is_visible=True, can_attack_air=False, can_attack_ground=True, position=Point2((4, 0))
+    )
+    assert p.decide([u], [enemy], 14, height, lambda p: True)[2] == "vision_obtained"
+    assert p.decide([u], [enemy], 234, height, lambda p: True)[2] == "timeout"

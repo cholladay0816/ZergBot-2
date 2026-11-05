@@ -182,6 +182,8 @@ def attacker_step(bot):
             "vision_weapon",
             tag=int(tank.tag),
             health=float(tank.health),
+            position=[float(v) for v in tank.position],
+            height=int(bot.get_terrain_height(tank.position)),
             own_cooldown=float(tank.weapon_cooldown),
             visible_hydras=len(targets),
             sight_range=float(tank.sight_range),
