@@ -123,6 +123,7 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
     u = flyer()
     bot.units = lambda kind: [hydra] if kind == U.HYDRALISK else [u] if kind == U.OVERSEER else []
     bot.enemy_units = NS(visible=[])
+    bot.enemy_structures = NS(visible=[])
     cliff_scenario.defender_step(bot)
     bot.record(
         "vision_weapon",

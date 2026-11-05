@@ -124,3 +124,17 @@ def test_visible_terrain_needs_no_assignment_and_sample_serializes(json_roundtri
         event["kind"], {k: v for k, v in event.items() if k not in ("kind", "frame")}
     )
     assert json_roundtrip(event)["remembered"]["last_seen_frame"] == 10
+
+
+def test_visible_static_anti_air_is_a_route_hazard():
+    u, tank, army = objects()
+    # Same normal visible-unit interface applies to enemy structures.
+    turret = unit(
+        8, (-10, 0), is_visible=True, is_structure=True, can_attack_air=True, air_range=7, radius=1
+    )
+    p = VisionMemory()
+    p.observe([tank], army, 10)
+    assert (
+        p.decide([u], [tank, turret], army, 10, lambda x: False, lambda x: True)[2]
+        == "no_safe_memory_flyer"
+    )

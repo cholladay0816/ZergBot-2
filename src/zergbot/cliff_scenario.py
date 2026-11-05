@@ -134,7 +134,7 @@ async def setup(bot):
 def defender_step(bot):
     hydras = list(bot.units(U.HYDRALISK))
     flyers = list(bot.units(U.OVERSEER))
-    enemies = list(bot.enemy_units.visible)
+    enemies = list(bot.enemy_units.visible) + list(bot.enemy_structures.visible)
     ground_targets = [e for e in enemies if not e.is_flying and e.can_attack_ground]
     for hydra in hydras:
         if ground_targets:
