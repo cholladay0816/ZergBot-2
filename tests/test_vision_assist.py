@@ -110,6 +110,15 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
         position=Point2((0, 0)),
         hold_position=Mock(),
     )
+    bot.enemy_units = [
+        NS(
+            tag=9,
+            type_id=U.OBSERVER,
+            position=Point2((5, 0)),
+            is_visible=True,
+            can_attack_ground=False,
+        )
+    ]
     asyncio.run(MeasuredBot.on_unit_took_damage(bot, hydra, 10))
     u = flyer()
     bot.units = lambda kind: [hydra] if kind == U.HYDRALISK else [u] if kind == U.OVERSEER else []
@@ -140,6 +149,8 @@ def test_real_setup_inference_sample_weapon_and_death_json_contract(monkeypatch,
     inferred = next(e for e in events if e["kind"] == "vision_inference")
     assert inferred["source_type"] is None and not inferred["source_confirmed"]
     assert not inferred["exhaustive"]
+    observation = next(e for e in events if e["kind"] == "vision_damage_observation")
+    assert observation["visible_enemies"][0]["terrain_visible"] is False
 
 
 def test_cliff_setup_rejects_slopes_and_blocked_plateaus():

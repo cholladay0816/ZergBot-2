@@ -159,6 +159,7 @@ class MeasuredBot(BotAI):
                         tag=int(e.tag),
                         unit_type=e.type_id.name,
                         position=[float(v) for v in e.position],
+                        terrain_visible=bool(self.is_visible(e.position)),
                     )
                     for e in self.enemy_units
                     if e.is_visible
