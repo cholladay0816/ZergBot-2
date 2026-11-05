@@ -21,6 +21,8 @@ HARASS_EVENT_FIELDS = {
         "own_orders",
     },
     "burrow_tank": {"tag", "own_cooldown", "own_target", "position", "visible_roaches"},
+    "siege_destroyed": {"tag", "unit_type"},
+    "siege_weapon": {"tag", "own_cooldown", "health", "position", "own_target"},
     "siege_sample": {"army", "visible_tanks", "minimum_spacing"},
     "hellion_diversion": {
         "tag",

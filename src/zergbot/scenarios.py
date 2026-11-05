@@ -139,6 +139,8 @@ class MeasuredBot(BotAI):
         self.previous_own_types = {u.tag: u.type_id.name for u in self.units}
 
     async def on_unit_destroyed(self, tag):
+        if self.options.scenario == "tank" and tag in self.previous_own_types:
+            self.record("siege_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
         if self.options.scenario == "burrow-tank" and tag in self.previous_own_types:
             self.record("burrow_destroyed", tag=int(tag), unit_type=self.previous_own_types[tag])
 
@@ -233,7 +235,7 @@ class Defender(MeasuredBot):
                     (U.ZERGLING, 12, queen, 1),
                     (U.BANELING, 4, queen, 1),
                     (U.OVERLORD, 1, base.towards(self.game_info.map_center, 10), 1),
-                    (U.SIEGETANKSIEGED, 1, attack, 2),
+                    (U.SIEGETANKSIEGED, self.options.tank_count, attack, 2),
                 ]
             )
         elif self.options.scenario == "lings":
@@ -594,6 +596,18 @@ class Attacker(MeasuredBot):
                         position=list(target.position),
                         own_cooldown=float(tank.weapon_cooldown),
                     )
+            if self.options.scenario == "tank":
+                for tank in self.units(U.SIEGETANKSIEGED):
+                    self.record(
+                        "siege_weapon",
+                        tag=int(tank.tag),
+                        own_cooldown=float(tank.weapon_cooldown),
+                        health=float(tank.health),
+                        position=[float(v) for v in tank.position],
+                        own_target=int(tank.orders[0].target)
+                        if tank.orders and isinstance(tank.orders[0].target, int)
+                        else None,
+                    )
             if self.options.scenario == "burrow-tank":
                 for tank in self.units(U.SIEGETANKSIEGED):
                     self.record(
@@ -809,6 +823,7 @@ def main():
     parser.add_argument("--controller", choices=["baseline", "micro"], default="micro")
     parser.add_argument("--approach", type=int, choices=[0, 1, 2], default=1)
     parser.add_argument("--adept-mode", choices=["commit", "cancel"], default="commit")
+    parser.add_argument("--tank-count", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--burrow-research", action="store_true")
     parser.add_argument("--burrow-tanks", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--burrow-detection", action="store_true")
